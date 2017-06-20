@@ -4,6 +4,54 @@ Paragraph::Paragraph(){
 	;
 }
 
+// All of these operations also have to update modifiers, besides the replace operations.
+void Paragraph::append_ch(char ch){
+	text += ch;
+	update_line_markers();
+}
+
+// all modifiers that begin before the character and end on the character before or later must be extrended.
+// this would be very complicated.
+// I could do the custom character solution.
+//
+// Should I do strings? I just saw a problem with it. How do I deal with whitespace lines?
+// idea: they're not just vectors, they're classes that contain vectors. They also contain vectors for whitespace at the beginning and end of the lines.
+// Or no just the end, because that's all I would need: every line MUST begin with a non-whitespace character, so there is only free whitespace at the ENDS.
+// but what about the first line? That line CAN contain whitespace at the beginning, spaces or tabs or whatever. Spaces would make counting easier, so its spaces.
+// But I don't like spaces. Better idea: You can only use tabs at the beginning, and those tabs are stored by the paragraph. Well no, I could store spaces too.
+//
+// The paragraph uses the tabs to change how it counts the characters in the first line.
+//
+// But what if the initial tabs and spaces exceed the line limit?
+//
+// In addition, each paragraph can be indented a certain amount of tabs, which changes how it counts characters in all lines.
+//
+// I'm not checking indices here, because std::string will throw exceptions for me, better than I can.
+//
+// Shit should tabs represent a certain amount of space distances or should they represent movement to a tab stop?
+//
+// Maybe whitespace should be counted as valid characters only at the beginning of a paragraph? But then if the entire first line is whitespace, that's super confusnig!
+// ARGGGCH
+//
+// Two possible solutions: make tabs visible, or disable first-line indentation in favor of persistent whole-paragraph indentation. I lean towards the latter, as it simplifies the structure immensely.
+// Yes, let's do that, with per-character formatting, line-by-line internal representation, and end-of-line whitespace storage.
+void Paragraph::insert_ch(std::string::size_type index, char ch){
+	text.insert(index, 1, ch);
+	update_line_markers();
+}
+
+char Paragrah::replace_ch(std::string::size_type index, char ch){
+	text[index] = ch;
+	return ch;
+};
+
+char Paragraph::delete_ch(std::string::size_type index){
+	char ch = text[index];
+	text.erase(index, 1);
+	update_line_markers();
+	return ch;
+}
+
 void Paragraph::insert_string(std::string::size_type index, const std::string &str){
 	text.insert(index, str);
 	update_line_markers();
@@ -14,8 +62,43 @@ void Paragraph::append_string(const std::string &str){
 	update_line_markers();
 }
 
+std::string Paragraph::replace_string(std::string::size_type index, const std::string &str){
+	text.replace(index, str.size(), str);
+	update_line_markers();
+}
+
+std::string Paragraph::delete_string(std::string::size_type index, int length){
+	std::string ret = text.substr(index, length);
+	text.erase(index, length);
+	update_line_markers();
+	return ret;
+}
+
+bool apply_modifier(FormatModifier modifier){
+}
+
+// Without modifiers included, those are separate.
+std::vector<std::string> get_lines();
+
+// Returns a copy, to avoid unintentional modification.
+std::vector<FormatModifier> get_modifiers ();
+
+// Returns the type of the update done to this paragraph in the last char read.
+// Needs to be cleared before each cycle.
+UpdateType get_last_update();
+void clear_last_update();
+
+void set_line_width(std::string::size_type lw);
+
+void update_line_markers();
+
+
+
+
+
 void Paragraph::set_line_width(std::string::size_type lw){
 	line_width = lw;
+	update_line_markers();
 }	
 
 // How should this work? I have to find the last bit of whitespace before the character limit, and break there. If there is no whitespace, I break the word.l
@@ -35,6 +118,27 @@ void Paragraph::set_line_width(std::string::size_type lw){
 // Yeah, this would actually be quite simple if I were using strings.
 //
 // In the debate between the two, I think the question comes down to display. Which will make it easier to  display hte lines?
+// to dispaly the lines, it will be easiest if the formatting is available per line.
+// That implies that i should use strings, and store formatting per line.
+// But how would I use the formatmodifiers? i would have to pass all of them with each string, and it would be hard for a display manager
+// to know which modifier applied to what. I suppose it could prepare a line to print, then examine every single modifier and insert control characters.
+// But it might be better for these strings i use to use my own custom character, which stores its formatting.
+// the formatting would be as an enum, binary style, using and and or to retrieve and store values.
+// and the paragraph itself stores header style. 
+// Actually they would have to be vectors of my own type, because I don't know how to implement string with my own type.
+//
+// But before I do that, I should rule out the control character idea.
+// I would use attr_on. Which one does that conform to more closely?
+// honestly it seems to conform to the modifiers more closely.
+// Lets to modifiers with strings, modifiers are for each string, not for the whole paragraph.
+//
+// Actually I should probably wait to change this until I actually implement the display.
+//
+// In any case, each paragraph's lines are always kept internally consistent.
+// Using markers, an external agent can determine the correct index for a given cursor position. You simply find the right set of markers, then increment from the start.
+//
+// idea: 
+// 
 void Paragraph::update_line_markers() {
 	std::vector<std::pair<std::string::size_type, std::string::size_type>> temp_markers;
 
@@ -116,6 +220,22 @@ std::vector<std::string> Paragraph::get_lines() {
 	}
 
 	return ret;
+}
+
+std::string::size_type get_index(int line, std::string::size_type x){
+	if (line >= line_markers.size()){
+		return -1;
+	}
+
+	std::pair<std::string::size_type, std::string::size_type> pr = line_markers[line];
+
+	if (x >= pr.second - pr.first){
+		return -1;
+	}
+
+	else {
+		return pr.first + x;
+	}
 }
 
 
