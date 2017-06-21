@@ -5,90 +5,79 @@
 #include <string>
 #include <cctype>
 
-// Defines the types of formatting that a FormatModifier can cause.
-enum class FormatEffect {bold, italic, underline, strikethrough, link, header1, header2, header3, none};
+// class definitions must be unique per translation unit, not per application.
+// the language recognizes that classes would be useless without this.
+// However, definitions must be identical in all respects.
 
-// Data object
-class FormatModifier{
-	public:
-		// We can get and set the start and end,
-		// but I want it to be extremely clear when that happens.
-		int get_start();
-		int get_end();
+// so, using a namespace for the bit flags would not be as nice.
 
-		int set_start();
-		int set_end();
-
-		// We cannot set the effect of an already-initialized modifier.
-		FormatEffect get_effect();
-
-		// Constructor
-		FormatModifier(int start, int end, FormatEffect effect);
-
-	private:
-		// start is inclusive, end is exclusive.
-		// If end is zero, that means the formatting continues for the entire paragraph.
-		int start, end;
-		FormatEffect effect;
+// Defines the types of formatting an fchar can use.
+enum class Format: char {
+	none = 0x00,
+	bold = 0x01,
+	italic = 0x02,
+	underline = 0x04,
+	strikethrough = 0x08,
+	link = 0x10
 };
 
-// Describes the type of the last update done to a paragraph. Structural changes are changes in the textual content of the paragraph, 
-// like adding a character. Formatting changes are what they sound like, and they don't affect the placement of characters in the paragraph.
-enum class UpdateType {structural, formatting, none};
+enum class HeaderLevel {none, h1, h2, h3};
+
+struct fchar {
+	char ch;
+	Format ft = Format::none;
+};
+
+class Line {
+	public:
+		typedef std::vector<fchar> text_type;
+		typedef std::vector<fchar>::size_type index_type;
+
+		// The length of the line, not the number of characters contained in this object.
+		// Therefore doesn't include post_space.
+		index_t line_length();
+
+		// Uses last_space to remove the last word from the text and remove it.
+		text_type pop_word();
+
+		void prepend_word(text_type word);
+
+		void insert_ch(index_type i, char ch);
+	
+	private:
+		text_type text;
+		text_type post_space;
+
+		index_type first_space;
+		index_type last_space;
+
+		void update_first_and_last_space();
+};
+
+struct p_index {
+	int line_no;
+	Line::index_type index;
+}
 
 class Paragraph{
 	public:
-		// The replace and delete operations return what they remove from the text.
-		void append_ch(char ch);
-		void insert_ch(std::string::size_type index, char ch);
-		char replace_ch(std::string::size_type index, char ch);
-		char delete_ch(std::string::size_type index);
+		void insert_ch(p_index i, char ch);
+		char delete_ch(p_index i);
 
-		void append_string(const std::string &str);
-		void insert_string(std::string::size_type index, const std::string &str);
-		std::string replace_string(std::string::size_type index, const std::string &str);
-		std::string delete_string(std::string::size_type index, int length);
+		bool apply_modifier(p_index start, p_index end, Format f);
 
-		// Must also be able to remove modifiers
-		// Special behavior when same modifier applied twice.
-		// Can clear formatting by applying "none" format.
-		bool apply_modifier(FormatModifier modifier);
+		std::vector<Line::text_type> get_lines();
 
-		// Without modifiers included, those are separate.
-		std::vector<std::string> get_lines();
-
-		// Returns a copy, to avoid unintentional modification.
-		std::vector<FormatModifier> get_modifiers ();
-
-		// Returns the type of the update done to this paragraph in the last char read.
-		// Needs to be cleared before each cycle.
-		UpdateType get_last_update();
-		void clear_last_update();
-
-		void set_line_width(std::string::size_type lw);
-
-		void update_line_markers();
+		void set_line_width(Line::index_type lw);
 
 		// Constructor
-		Paragraph();
-		std::vector< std::pair<std::string::size_type, std::string::size_type> > line_markers;
-		std::string text;
-		std::string::size_type line_width;
+		Paragraph(Line::index_type lw);
 
 	private:
-		std::vector<FormatModifier> modifiers;
+		Line::index_type line_width;
+		std::vector<Line> lines;
 
-		// Gets set internally, when public methods are used to change the paragraph.
-		UpdateType last_update;
+		void adjust_lines_to_width();
 };
-
-
-// Should I keep this idea? I forgot to address what happens when the formatting spans multiple paragraphs. That was dumb.
-// Either we have to split the formatting between paragraphs, or the formatting has to exist outside paragraphs.
-// If it exists outside paragraphs, it would have to be delineated by character count from the start of the file.
-// That would mean keeping track of all the characters, maybe in a giant string. That would be a nightmare, and I'm not doing it.
-// Better to make multiple modifiers when formatting spans multiple paragraphs.
-//
-// I should make a paragraph display manager. Maybe cursor display should be part of meta.
 
 #endif

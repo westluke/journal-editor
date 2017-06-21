@@ -1,80 +1,34 @@
 #include "Paragraph.hpp"
 
-Paragraph::Paragraph(){
+// Bitwise OR
+inline Format Format::operator|(Format a, Format b){
+	return static_cast<char>(a) | static_cast<char>(b);
+}
+
+// Bitwise AND
+inline Format Format::operator&(Format a, Format b){
+	return static_cast<char>(a) & static_cast<char(b);
+}
+
+// Bitwise XOR
+inline Format Format::operator^(Format a, Format b){
+	return static_cast<char>(a) ^ static_cast<char(b);
+}
+
+Paragraph::Paragraph(): line_width(lw){
 	;
 }
 
-// All of these operations also have to update modifiers, besides the replace operations.
-void Paragraph::append_ch(char ch){
-	text += ch;
-	update_line_markers();
-}
-
-// all modifiers that begin before the character and end on the character before or later must be extrended.
-// this would be very complicated.
-// I could do the custom character solution.
-//
-// Should I do strings? I just saw a problem with it. How do I deal with whitespace lines?
-// idea: they're not just vectors, they're classes that contain vectors. They also contain vectors for whitespace at the beginning and end of the lines.
-// Or no just the end, because that's all I would need: every line MUST begin with a non-whitespace character, so there is only free whitespace at the ENDS.
-// but what about the first line? That line CAN contain whitespace at the beginning, spaces or tabs or whatever. Spaces would make counting easier, so its spaces.
-// But I don't like spaces. Better idea: You can only use tabs at the beginning, and those tabs are stored by the paragraph. Well no, I could store spaces too.
-//
-// The paragraph uses the tabs to change how it counts the characters in the first line.
-//
-// But what if the initial tabs and spaces exceed the line limit?
-//
-// In addition, each paragraph can be indented a certain amount of tabs, which changes how it counts characters in all lines.
-//
-// I'm not checking indices here, because std::string will throw exceptions for me, better than I can.
-//
-// Shit should tabs represent a certain amount of space distances or should they represent movement to a tab stop?
-//
-// Maybe whitespace should be counted as valid characters only at the beginning of a paragraph? But then if the entire first line is whitespace, that's super confusnig!
-// ARGGGCH
-//
-// Two possible solutions: make tabs visible, or disable first-line indentation in favor of persistent whole-paragraph indentation. I lean towards the latter, as it simplifies the structure immensely.
-// Yes, let's do that, with per-character formatting, line-by-line internal representation, and end-of-line whitespace storage.
 void Paragraph::insert_ch(std::string::size_type index, char ch){
 	text.insert(index, 1, ch);
 	update_line_markers();
 }
-
-char Paragrah::replace_ch(std::string::size_type index, char ch){
-	text[index] = ch;
-	return ch;
-};
 
 char Paragraph::delete_ch(std::string::size_type index){
 	char ch = text[index];
 	text.erase(index, 1);
 	update_line_markers();
 	return ch;
-}
-
-void Paragraph::insert_string(std::string::size_type index, const std::string &str){
-	text.insert(index, str);
-	update_line_markers();
-}
-
-void Paragraph::append_string(const std::string &str){
-	text.append(str);
-	update_line_markers();
-}
-
-std::string Paragraph::replace_string(std::string::size_type index, const std::string &str){
-	text.replace(index, str.size(), str);
-	update_line_markers();
-}
-
-std::string Paragraph::delete_string(std::string::size_type index, int length){
-	std::string ret = text.substr(index, length);
-	text.erase(index, length);
-	update_line_markers();
-	return ret;
-}
-
-bool apply_modifier(FormatModifier modifier){
 }
 
 // Without modifiers included, those are separate.

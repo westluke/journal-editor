@@ -3,7 +3,7 @@
 #include <string>
 #include <sstream>
 
-#include "Paragraph.hpp"
+//#include "Paragraph.hpp"
 
 const char ESC = 27;
 
@@ -17,7 +17,20 @@ void print_next_line(std::string line, int x) {
 }
 */
 
+enum class Test: int {
+	zero = 0x00,
+	one = 0x01,
+	two = 0x02,
+	four = 0x04,
+	eight = 0x08
+};
+
 int main() {
+
+	Test t = Test::zero;
+	t = Test::zero | Test::one;
+	int i = 0x00 | 0x01;
+
 	/*
 	initscr();	// Start curses mode
 	cbreak();	// Disable line-by-line buffering
@@ -35,9 +48,9 @@ int main() {
 	//Control cntrl(stdscr);
 	//cntrl.loop();
 	
-	Paragraph p;
-	p.set_line_width(20);
-	p.append_string("a");
+//	Paragraph p;
+//	p.set_line_width(20);
+//	p.append_string("a");
 
 	// looks like the function works! Later, I might want to run tests and see if it can run faster using strings as data.
 	// But for now, this works just fine.
@@ -48,16 +61,17 @@ int main() {
 	p.append_string("Now take it without whitespace: ________________________________________________________");
 	*/
 
-	std::cout << p.line_width << std::endl;;
-	std::cout << p.text << std::endl;;
-	
-	for (auto pr : p.line_markers){
-		std::cout << pr.first << " " << pr.second << std::endl;
-	}
+//	std::cout << p.line_width << std::endl;;
+//	std::cout << p.text << std::endl;;
+//	
+//	for (auto pr : p.line_markers){
+//		std::cout << pr.first << " " << pr.second << std::endl;
+//	}
+//
+//	for (std::string line : p.get_lines()){
+//		std::cout << line << std::endl;
+//	}
 
-	for (std::string line : p.get_lines()){
-		std::cout << line << std::endl;
-	}
 
 
 
