@@ -5,12 +5,6 @@
 #include <string>
 #include <cctype>
 
-// class definitions must be unique per translation unit, not per application.
-// the language recognizes that classes would be useless without this.
-// However, definitions must be identical in all respects.
-
-// so, using a namespace for the bit flags would not be as nice.
-
 // Defines the types of formatting an fchar can use.
 enum class Format: char {
 	none = 0x00,
@@ -26,6 +20,10 @@ enum class HeaderLevel {none, h1, h2, h3};
 struct fchar {
 	char ch;
 	Format ft = Format::none;
+
+	inline bool isspace() {
+		return isspace(static_cast <int>(ch));
+	}
 };
 
 class Line {
@@ -35,29 +33,26 @@ class Line {
 
 		// The length of the line, not the number of characters contained in this object.
 		// Therefore doesn't include post_space.
-		index_t line_length();
+		index_type line_length();
 
-		// Uses last_space to remove the last word from the text and remove it.
-		text_type pop_word();
+		// We pop words to get a Line under a line width limit, therefore there is always a minimum number of characters to be removed.
+		// This means that if there is no whitespace in the line, which is possible, we can just cut a chunk off the block of text.
+		text_type break_line(index_type line_width);
 
-		void prepend_word(text_type word);
+		void prepend_text(text_type words);
 
 		void insert_ch(index_type i, char ch);
+		fchar delete_ch(index_type i);
 	
 	private:
 		text_type text;
-		text_type post_space;
 
-		index_type first_space;
-		index_type last_space;
-
-		void update_first_and_last_space();
 };
 
 struct p_index {
 	int line_no;
 	Line::index_type index;
-}
+};
 
 class Paragraph{
 	public:

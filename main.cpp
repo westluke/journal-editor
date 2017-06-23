@@ -3,7 +3,7 @@
 #include <string>
 #include <sstream>
 
-//#include "Paragraph.hpp"
+#include "Paragraph.hpp"
 
 const char ESC = 27;
 
@@ -26,11 +26,6 @@ enum class Test: int {
 };
 
 int main() {
-
-	Test t = Test::zero;
-	t = Test::zero | Test::one;
-	int i = 0x00 | 0x01;
-
 	/*
 	initscr();	// Start curses mode
 	cbreak();	// Disable line-by-line buffering
