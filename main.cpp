@@ -3,9 +3,9 @@
 #include <string>
 #include <sstream>
 
-#include "Paragraph.hpp"
+#include "Line.hpp"
 
-const char ESC = 27;
+//const char ESC = 27;
 
 /*
 // Handy debugging function that prints a string on the next line below the cursor.
@@ -16,14 +16,6 @@ void print_next_line(std::string line, int x) {
 	refresh();
 }
 */
-
-enum class Test: int {
-	zero = 0x00,
-	one = 0x01,
-	two = 0x02,
-	four = 0x04,
-	eight = 0x08
-};
 
 int main() {
 	/*
@@ -40,36 +32,13 @@ int main() {
 	mousemask(ALL_MOUSE_EVENTS, nullptr);
 	*/
 
-	//Control cntrl(stdscr);
-	//cntrl.loop();
-	
-//	Paragraph p;
-//	p.set_line_width(20);
-//	p.append_string("a");
+	Line l1 ("This is a line!");
+	Line l2 ("This is a second line!");
 
-	// looks like the function works! Later, I might want to run tests and see if it can run faster using strings as data.
-	// But for now, this works just fine.
+	l1.relieve_excess(l2, 5);
 
-	/*
-	p.append_string("This is a paragraph. I want to see whether it can effectively split this text into several lines, and how easily it does it.");
-	p.append_string("Here's a lot of whitespace:                                                            ");
-	p.append_string("Now take it without whitespace: ________________________________________________________");
-	*/
-
-//	std::cout << p.line_width << std::endl;;
-//	std::cout << p.text << std::endl;;
-//	
-//	for (auto pr : p.line_markers){
-//		std::cout << pr.first << " " << pr.second << std::endl;
-//	}
-//
-//	for (std::string line : p.get_lines()){
-//		std::cout << line << std::endl;
-//	}
-
-
-
-
+	std::cout << l1.get_string() << std::endl;
+	std::cout << l2.get_string() << std::endl;
 
 	//endwin();
 	return 0;

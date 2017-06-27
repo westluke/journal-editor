@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cctype>
+#include <string>
 
 // Defines the types of formatting an fchar can use.
 enum class Format: char {
@@ -16,24 +17,15 @@ enum class Format: char {
 
 
 struct fchar {
-	char ch;
+	int ch;
 	Format ft = Format::none;
 
 	inline bool isspace() {
-		return isspace(static_cast <int>(ch));
+		return std::isspace(static_cast <int>(ch));
 	}
 };
 
-// For popping from the end of a line, all actions are basically equivalent.
-// But for moving from the beginning of a line to the end of the previous, that's different.
-// I will allow a calling function to define this Line as a first line. That seems like the best way to protect it.
-// what if I had functions that took another Line object and passed in some text to those objects? That might work better.
-// After all, that's the only thing that prepend_text, append_text, break_line, and get_beginning_text should be used for.
-// Using them for anything else is misleading at best.
-// We could add other functions when we need to that operate using the underlying text as they should, like inserting strings.
-// But those should never be conflated with the functions that use extra state, like break_line.
-// break_line is the kind of function that is used only for cosmetic purposes. It should never ever really change the structure of a paragraph.
-// So yeah, lets make those functions.
+// The vector operations don't throw their own errors, so I have to do that myself!
 class Line {
 	public:
 		typedef std::vector<fchar> text_type;
@@ -43,11 +35,22 @@ class Line {
 		bool exceeds_width_non_whitespace(index_type line_width);
 
 		// Changes the state of both lines, but preserves all characters between them.
-		void relieve_excess(Line ln, index_type line_width);
-		void accept_flowback(Line ln, index_type line_width);
+		bool relieve_excess(Line &ln, index_type line_width);
+		bool accept_flowback(Line &ln, index_type line_width);
 
 		void insert_ch(index_type i, fchar ch);
 		fchar delete_ch(index_type i);
+
+		static text_type string_to_text_type(const std::string &str);
+		static std::string text_type_to_string(const text_type &t);
+
+		fchar get_ch(index_type);
+		text_type get_text();
+		std::string get_string();
+
+		Line(const text_type &t);
+		Line(const std::string &str);
+		Line(const char *str);
 
 	private:
 		text_type text;
