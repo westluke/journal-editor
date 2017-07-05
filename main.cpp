@@ -1,9 +1,13 @@
 //#include <ncurses.h>
+// #define NDEBUG	// Uncomment to disable assert()
 #include <iostream>
 #include <string>
 #include <sstream>
 
 #include "Line.hpp"
+
+// #define NDEBUG
+#include <cassert>
 
 //const char ESC = 27;
 
@@ -32,10 +36,12 @@ int main() {
 	mousemask(ALL_MOUSE_EVENTS, nullptr);
 	*/
 
+//	assert(false);
+
 	Line l1 ("This is a line!");
 	Line l2 ("This is a second line!");
 
-	l1.relieve_excess(l2, 5);
+	l1.relieve_excess(l2, 0);
 
 	std::cout << l1.get_string() << std::endl;
 	std::cout << l2.get_string() << std::endl;

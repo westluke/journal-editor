@@ -1,23 +1,52 @@
 #include "Line.hpp"
 
+//#define NDEBUG
+#include <cassert>
+
+
+
+
+
+
+
+
+
+// USE ASSERTS? SHOULD I USE THAT NOW? THEORETICALLY, THERE SHOULD NEVER BE ERRORS DOWN AT THIS LEVEL.
+// SO, FOR SPEED, IT WOULD MAKE SENSE TO USE ASSERTS.
+// BUT I PROBABLY SHOULDNT THINK ABOUT SPEED RIGHT NOW. LETS DO THAT LATER?
+// ACTUALLY NO, LETS DO IT, BECAUSE IT CAN BE EASILY REPLACED (LITERALLY WITH A VIM MACRO)
+// ALSO, IT CLEARLY DESIGNATES ERROR CHECKS THAT SHOULD NOT BE NEEDED VS ERROR CHECKS THAT MAINTAIN PROGRAM OPERATION.
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Bitwise OR
-inline Format operator|(Format a, Format b){
-	return static_cast<Format>(static_cast<char>(a) | static_cast<char>(b));
+inline TextStyle operator|(TextStyle a, TextStyle b){
+	return static_cast<TextStyle>(static_cast<char>(a) | static_cast<char>(b));
 }
 
 // Bitwise AND
-inline Format operator&(Format a, Format b){
-	return static_cast<Format>(static_cast<char>(a) & static_cast<char>(b));
+inline TextStyle operator&(TextStyle a, TextStyle b){
+	return static_cast<TextStyle>(static_cast<char>(a) & static_cast<char>(b));
 }
 
 // Bitwise XOR
-inline Format operator^(Format a, Format b){
-	return static_cast<Format>(static_cast<char>(a) & static_cast<char>(b));
+inline TextStyle operator^(TextStyle a, TextStyle b){
+	return static_cast<TextStyle>(static_cast<char>(a) & static_cast<char>(b));
 }
 
 // Bitwise NOT
-inline Format operator~(Format a){
-	return static_cast<Format>(~static_cast<char>(a));
+inline TextStyle operator~(TextStyle a){
+	return static_cast<TextStyle>(~static_cast<char>(a));
 }
 
 Line::index_type Line::line_length(){
@@ -25,7 +54,7 @@ Line::index_type Line::line_length(){
 }
 
 bool Line::exceeds_width_non_whitespace(Line::index_type line_width){
-	for (int i = text.size(); i >= line_width; i--){
+	for (int i = text.size() - 1; i >= line_width; i--){
 		if (!text[i].isspace()){
 			return true;
 		}
@@ -35,8 +64,10 @@ bool Line::exceeds_width_non_whitespace(Line::index_type line_width){
 
 bool Line::relieve_excess(Line &ln, Line::index_type line_width){
 	// There is no reason for this to ever happen, so we throw an error.
-	if (line_width <= 0) throw std::domain_error("line_width must be positive.");
-	if (line_width >= text.size()) return false;
+	// if (line_width <= 0) throw std::domain_error("line_width must be positive.");
+	// if (line_width >= text.size()) return false;
+	assert((line_width > 0));
+	assert((line_width < text.size()));
 
 	// Unfortunately have to do this in order to check that i becomes negative.
 	Line::index_type i;
@@ -65,8 +96,10 @@ bool Line::relieve_excess(Line &ln, Line::index_type line_width){
 bool Line::accept_flowback(Line &ln, Line::index_type line_width){
 
 	// Unsigned, but could still be zero.
-	if (line_width <= 0) throw std::domain_error("line_width must be positive.");
-	if (ln.text.size() == 0) throw std::domain_error("ln must contain characters.");
+	// if (line_width <= 0) throw std::domain_error("line_width must be positive.");
+	// if (ln.text.size() == 0) throw std::domain_error("ln must contain characters.");
+	assert((line_width > 0));
+	assert((ln.text.size()));
 	
 	Line::index_type i = 0, last_index = 0;
 
@@ -95,7 +128,8 @@ bool Line::accept_flowback(Line &ln, Line::index_type line_width){
 
 // We don't make sure that fch is an acceptable fchar, so that should be handled elsewhere.
 void Line::insert_ch(Line::index_type i, fchar fch){
-	if (i >= text.size()) throw std::out_of_range("Index beyond range of Line for character insertion.");
+	// if (i >= text.size()) throw std::out_of_range("Index beyond range of Line for character insertion.");
+	assert((i < text.size()));
 	text.insert(text.begin() + i, fch);
 }
 
@@ -108,21 +142,15 @@ fchar Line::delete_ch(Line::index_type i){
 
 Line::text_type Line::string_to_text_type(const std::string &str){
 	text_type t;
-
-	for (auto c : str){
-		t.push_back({c, Format::none});
+	for (auto ch : str){
+		t.push_back({ch, TextStyle::none});
 	}
-
 	return t;
 }
 
 std::string Line::text_type_to_string(const Line::text_type &t){
 	std::string str;
-
-	for (auto fch : t){
-		str.push_back(fch.ch);
-	}
-
+	for (auto fch : t) str.push_back(fch.character);
 	return str;
 }
 

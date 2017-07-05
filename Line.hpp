@@ -4,9 +4,9 @@
 #include <vector>
 #include <cctype>
 #include <string>
+#include <cassert>
 
-// Defines the types of formatting an fchar can use.
-enum class Format: char {
+enum class TextStyle: char {
 	none = 0x00,
 	bold = 0x01,
 	italic = 0x02,
@@ -17,15 +17,16 @@ enum class Format: char {
 
 
 struct fchar {
-	int ch;
-	Format ft = Format::none;
+	int character;
+	TextStyle style;
 
 	inline bool isspace() {
-		return std::isspace(static_cast <int>(ch));
+		return std::isspace(static_cast <int>(character));
 	}
 };
 
 // The vector operations don't throw their own errors, so I have to do that myself!
+// A Line can be empty.
 class Line {
 	public:
 		typedef std::vector<fchar> text_type;
