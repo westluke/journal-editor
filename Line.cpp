@@ -3,50 +3,8 @@
 //#define NDEBUG
 #include <cassert>
 
-
-
-
-
-
-
-
-
-// USE ASSERTS? SHOULD I USE THAT NOW? THEORETICALLY, THERE SHOULD NEVER BE ERRORS DOWN AT THIS LEVEL.
-// SO, FOR SPEED, IT WOULD MAKE SENSE TO USE ASSERTS.
-// BUT I PROBABLY SHOULDNT THINK ABOUT SPEED RIGHT NOW. LETS DO THAT LATER?
-// ACTUALLY NO, LETS DO IT, BECAUSE IT CAN BE EASILY REPLACED (LITERALLY WITH A VIM MACRO)
-// ALSO, IT CLEARLY DESIGNATES ERROR CHECKS THAT SHOULD NOT BE NEEDED VS ERROR CHECKS THAT MAINTAIN PROGRAM OPERATION.
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Bitwise OR
-inline TextStyle operator|(TextStyle a, TextStyle b){
-	return static_cast<TextStyle>(static_cast<char>(a) | static_cast<char>(b));
-}
-
-// Bitwise AND
-inline TextStyle operator&(TextStyle a, TextStyle b){
-	return static_cast<TextStyle>(static_cast<char>(a) & static_cast<char>(b));
-}
-
-// Bitwise XOR
-inline TextStyle operator^(TextStyle a, TextStyle b){
-	return static_cast<TextStyle>(static_cast<char>(a) & static_cast<char>(b));
-}
-
-// Bitwise NOT
-inline TextStyle operator~(TextStyle a){
-	return static_cast<TextStyle>(~static_cast<char>(a));
+void print(TextStyle a){
+	std::cout << static_cast<int>(a) << std::endl;
 }
 
 Line::index_type Line::line_length(){
@@ -62,12 +20,14 @@ bool Line::exceeds_width_non_whitespace(Line::index_type line_width){
 	return false;
 }
 
+
+// Maybe test where line width is more than text sizes, currently handled with assert
 bool Line::relieve_excess(Line &ln, Line::index_type line_width){
-	// There is no reason for this to ever happen, so we throw an error.
-	// if (line_width <= 0) throw std::domain_error("line_width must be positive.");
-	// if (line_width >= text.size()) return false;
+	// This shouldn't be able to happen, so we assert.
 	assert((line_width > 0));
-	assert((line_width < text.size()));
+
+	// This could conceivably happen, so we just return false for this.
+	if (line_width >= text.size()) return false;
 
 	// Unfortunately have to do this in order to check that i becomes negative.
 	Line::index_type i;
@@ -93,30 +53,76 @@ bool Line::relieve_excess(Line &ln, Line::index_type line_width){
 	return true;
 }
 
-bool Line::accept_flowback(Line &ln, Line::index_type line_width){
+// RETHING TESTING PATHS
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+// RETHING TESTING PATHS
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
-	// Unsigned, but could still be zero.
-	// if (line_width <= 0) throw std::domain_error("line_width must be positive.");
-	// if (ln.text.size() == 0) throw std::domain_error("ln must contain characters.");
+// ln could be empty
+// the line could be all whitespace for that first for, so it arrives at ln.text.size
+// the line could  be all character for that second for
+// the line could start with some whitespace and then jump past a word, where that word fits
+// the line could start with some whitespace and then jump past a word, where that word doesn't fit and it has to revert. Make that two words actually.
+// it could also not start with whitespace and do those things, but I don't think i need to test that.
+// well, test it just once.
+//
+// so, thats 6 test cases. good!
+//
+//
+// NOPE: our line could already be full (do we test that? should I test that at the beginning?) no, because we can always flow back whitespace.
+bool Line::accept_flowback(Line &ln, Line::index_type line_width){
+	// This shouldn't ever be able to happen.
 	assert((line_width > 0));
-	assert((ln.text.size()));
+
+	// On the other hand, its possible that we attempt to flow back from an empty line.
+	if (ln.text.size() == 0) return false;
 	
 	Line::index_type i = 0, last_index = 0;
 
+	// Better way:
+	// advance one character at a time. We have a few conditions to check. Is it whitespace? Is the index past the end of ln? Do we have space left in the line?
+	// When we reach the first invalid index, we copy up to that point.
 	while (true){
 		// jump past the rest of the whitespace, arriving on first non-whitespace or on ln.text.size().
-		for (; ln.text[i].isspace() && i < ln.text.size(); i++);
+		for (; i < ln.text.size() && ln.text[i].isspace(); i++);
 
 		// jump past the rest of the word, arriving on first whitespace after a word or on ln.text.size().
-		for (; !ln.text[i].isspace() && i < ln.text.size(); i++);
+		for (; i < ln.text.size() && !ln.text[i].isspace(); i++);
 		
-		// We don't need to catch the eventuality of landing on ln.text.size() because it's always safe to copy an entire line into the previous.
 		// if the current size doesn't fit, use the last index.
 		if ((i > line_width - text.size()) || (i == ln.text.size())) break;
 
 		last_index = i;
 	}
 
+
+	// hrm whats going on here. comment this better.
 	for (; ln.text[last_index].isspace() && last_index < ln.text.size(); last_index++);
 
 	if (last_index == 0) return false;
@@ -126,14 +132,11 @@ bool Line::accept_flowback(Line &ln, Line::index_type line_width){
 	return true;
 }
 
-// We don't make sure that fch is an acceptable fchar, so that should be handled elsewhere.
 void Line::insert_ch(Line::index_type i, fchar fch){
-	// if (i >= text.size()) throw std::out_of_range("Index beyond range of Line for character insertion.");
 	assert((i < text.size()));
 	text.insert(text.begin() + i, fch);
 }
 
-// We don't check that i is within range of the text because the vector method .at() should handle that.
 fchar Line::delete_ch(Line::index_type i){
 	fchar ret = text.at(i);
 	text.erase(text.begin() + i);
@@ -143,7 +146,16 @@ fchar Line::delete_ch(Line::index_type i){
 Line::text_type Line::string_to_text_type(const std::string &str){
 	text_type t;
 	for (auto ch : str){
-		t.push_back({ch, TextStyle::none});
+		t.push_back(fchar(ch));
+	}
+	return t;
+}
+
+Line::text_type Line::string_to_text_type(const char *str){
+	std::string new_str = std::string(str);
+	text_type t;
+	for (auto ch : new_str){
+		t.push_back(fchar(ch));
 	}
 	return t;
 }
@@ -169,3 +181,4 @@ std::string Line::get_string() {
 Line::Line(const Line::text_type &t): text(t) {}
 Line::Line(const std::string &str): text(string_to_text_type(str)) {}
 Line::Line(const char *str): text(string_to_text_type(std::string(str))) {}
+Line::Line(): text() {}

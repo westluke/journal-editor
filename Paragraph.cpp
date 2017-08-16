@@ -3,27 +3,39 @@
 // #define NDEBUG
 #include <cassert>
 
-// size types are always unsigned.
-// where should these things be converted to fchars?
-// At the paragraph level, I think. an owning class won't know what format to apply to things, but a paragraph will.
-//
-// How should character insertion work? It's a little complicated. 
-// I could enter an insertion mode, where I don't have to do calculations every time.
-// I could do pure insertions alone.
-// I could give an option to specify format, or format separately. There isn't a huge difference.
-// When I insert the first character in an insertion mode, I still have to find the previous character, right?
-// Yes, but ah, here's an issue. Say we are at the end a paragraph, and I apply a new format to take hold on future characters I insert.
-// That can't be stored in some preceding character, can it.
-// So, instead, it must be stored in a separate variable, that determines what format characters will have appended to the end of the paragraph.
-//
-// Ok, that solves that. How about inserting characters? How do we find the last index? just make a function for it for now.
-//
-// Can the default format change over the course of a paragraph? maybe. Yes. If the first character ever changes format, that's the new default format.
-// It's initialized to a default format, but then it becomes whatever the first character's format is.
-// And of course, what it gets initialized to is dependent on which paragraph its a child of.
-//
-// Should there be a unified way to update characters? Idk what that would be.
-// I don't think so. Wait until that appears to make sense.
+
+/* Invalid states:
+ * If there is an empty line and more than one line
+ * If any line exceeds with non-whitespace
+ *
+ * If any line can flow back into the previous. Actually includes the following two:
+ * If any line contains beginning whitespace, besides the first line.
+ * If any line is entirely whitespace
+ */
+
+/* Given a paragraph, how might I pass through and ensure validity?
+ * First relieve excess on all lines. Now no lines exceed width.
+ * Now delete any empty lines.
+ * Now flowback all lines. But now we have an issue. Consider a paragraph like this:
+ *
+ * Words		|
+ * more words		|
+ * more			|
+ * Alonglinethatwontflow|
+ *
+ * Relieving excess and deleting empty lines does nothing. After flowing back, we get this:
+ *
+ * Wordsmore words	|
+ * more			|
+ * Alonglinethatwontflow|
+ * 			|
+ *
+ * Now more is just stranded there, even though it could flow back. Solution? Delete lines that become empty.
+ * And we can't do this validation every time. That would take forever. Have to have each function accept a valid state, and guaranteed to produce a valid state.
+ * In the meantime, I can do assert checks for valid state.
+ *
+ */
+
 void Paragraph::insert_ch(p_index i, int ch){
 	fchar fch;
 	fch.character = ch;
@@ -31,46 +43,25 @@ void Paragraph::insert_ch(p_index i, int ch){
 	// Verify that the p_index is valid.
 	assert((i.line_no < lines.size() && i.ch_index <= lines[i.line_no].line_length()));
 	
-	// how should I determine whether its the first character to be entered?
-	// I could ask whether the first Line is empty, because there should never be more than one Line if the first Line is empty.
-	// I could also first check that the number of Lines is one, and then that the first Line is empty. But that's almost equivalent.
-	// Let's do the first, and just remember that its a possible point of breakage if I fuck up and it becomes possible to have multiple empty lines.
-	// Paragraph should never have zero lines, so the .at(0) will catch that error.
-	
-	// If the character is the first character entered into the paragraph, use the initial format of the paragraph.
 	if (lines.at(0).line_length() == 0){
 		assert(lines.size() == 1);
 		fch.style = initial_style;
-	}
-
-	// If it's not the first character, use the format of the preceding character.
-	else if (!(i.line_no == 0 && i.ch_index == 0)) {
+	} else if (!(i.line_no == 0 && i.ch_index == 0)) {
 		fchar prev_char = get_ch(previous_index(i));
 		fch.style = prev_char.style;
-	}
-
-	// If it is the first character, use the format of the following character.
-	else {
+	} else {
 		fchar next_char = get_ch(next_index(i));
 		fch.style = next_char.style;
-		// use following format
 	}
-		// set default format. But that just means that this is the very first character, so there's a better way to do this.
-		// Actually, is there? It can be the first character, even when there are other characters in the line.
-		// That implies I need two default formats for characters, one for the end and one for the beginning. check drive.
-		// actually google drive doesn't do that. When inserting at the beginning, it just takes the format of the next character, UNLESS its also the first character to be entered in the paragraph
-		// What if its between two paragraphs?
-		// That depends on which paragraph creates the space. interesting. Should I mimic that behavior? Yeah I probalbly should. That's the only way to
-		// make it easy to extend formatting into a paragraph above. Still, we have the same structure, with a format option maintained that applies to appending to the paragraph. Anywhere else, we use the preceding character's format, except at the beginning of the paragraph, where we use the following character's format.
-
-//	if (prev.line_no
 
 	lines.at(i.line_no).insert_ch(i.ch_index, fch);
 
-	// Consider the implications of using -1 here.
-	int i = 0;
-	for (i = i.line_no, i < lines.size() - 1; i++){
-		lines[i].relieve_excess(lines[i+1], line_width);
+	// Wait no I should stop relieving excess as soon as the relief fails.
+	int i = i.line_no;
+	for (; i < lines.size() - 1; i++){
+		// If a relief fails, we can return immediately.
+		if (!(lines[i].relieve_excess(lines[i+1], line_width)))
+			return;
 	}
 
 	while (lines[i].exceeds_width_non_whitespace(line_width)){
@@ -81,7 +72,33 @@ void Paragraph::insert_ch(p_index i, int ch){
 }
 
 char Paragraph::delete_ch(p_index i){
+	assert((i.line_no < lines.size() && i.ch_index < lines[i.line_no].line_length()));
+
 	lines.at(i.line_no).delete_ch(i.ch_index);
+
+	if (i.line_no){
+		lines.at(i.line_no - 1).accept_flowback(lines.at(line_no));
+	}
+
+	int ind = i.line_no + 1;
+	while (ind < lines.size() && lines.at(ind - 1).accept_flowback(ind)) {
+		ind++;
+	}
+
+	if (ind >= lines.size()){
+		// flowed back from the last line.
+		// but wait what happens if there are multiple empty lines at the end? Is that possible?
+		// Also, wait, what if you flow back to a line, and then that line is eligible to flow back to the previous? Is that possible?
+		// I think so, but only if was already in an invalid state. I should define what the state of this thing must be, and what invalid is,
+		// and how to make sure its always valid.
+		// Maybe I should set up those test cases.
+	}
+
+
+	// When i delete a character, its possible I deleted it from a word at the beginning of a line, which means its possible the previous
+	// line can now accept flowback. I should try it. Thats the only previous line that must be considered. AFTER I DO THAT,
+	// I must check if the current line can accept flowback, and move forwards from there until lines stop accepting flowback.
+	// It's also now possible that lines at the front could become empty, in which case they must be deleted.
 }
 
 fchar Paragraph::get_ch(p_index i){
