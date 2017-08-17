@@ -1,0 +1,13 @@
+# Don't keep the object files.
+objects/
+objects/*
+
+# Don't keep my notes files. They're not usually relevant to the current state of the project.
+notes/
+notes/*
+
+# Don't keep vim backup files.
+*.swp
+
+# Don't keep .DS_Store junk file.
+.DS_Store

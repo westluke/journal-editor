@@ -36,7 +36,17 @@
  *
  */
 
+bool Paragraph::valid(){
+	for (int i = 0; i < lines.size(); i++){
+		if (lines[i].size() == 0 && i != 0) return false;
+		if (lines[i].exceeds_width_non_whitespace(line_width)) return false;
+		if (i > 0 && lines[i-1].accept_flowback(lines[i], line_width)) return false;
+	}
+	return true;
+}
+
 void Paragraph::insert_ch(p_index i, int ch){
+	assert((valid()));
 	fchar fch;
 	fch.character = ch;
 
@@ -69,6 +79,7 @@ void Paragraph::insert_ch(p_index i, int ch){
 		lines[i].relieve_excess(lines[i+1], line_width);
 		i++;
 	}
+	assert((valid()));
 }
 
 char Paragraph::delete_ch(p_index i){

@@ -1,25 +1,8 @@
 #include "Line.hpp"
-
-#define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 #include <iostream>
 #include <sstream>
 #include <string>
-
-/*
-// keep this commented out, sometimes comment out catch.hpp include.
-// Use to test the bitwise XOR which is failing.
-int main() {
-	TextStyle t_bold = TextStyle::bold;
-	TextStyle t_italic = TextStyle::italic;
-	TextStyle t_bold_italic = t_bold | t_italic;
-
-	print(t_bold);
-	print(t_italic);
-	print(t_bold_italic);
-	print(t_bold_italic ^ t_bold);
-}
-*/
 
 SCENARIO ("TextStyles can be operated on with bitwise operators") {
 	GIVEN ("Some TextStyle values") {
@@ -180,6 +163,9 @@ SCENARIO ("Line objects store lines of text as they might appear in a text windo
 		Line acceptor = Line("");
 		Line flowback;
 
+		//Line::index_type a = 30, b = 31;
+		//WARN(a-b);
+
 		SECTION("The flowback Line is empty."){
 			flowback = Line("");
 			REQUIRE(acceptor.accept_flowback(flowback, 60) == false);
@@ -230,9 +216,10 @@ SCENARIO ("Line objects store lines of text as they might appear in a text windo
 
 		SECTION("60 characters should fit."){
 			//	         0         10        20        30        40        50        60        70        80
-			flowback = Line("This is a flowback line and only the first 60 characters fit few words should fitbutnomore.");
+			flowback = Line("This is a flowback line and only the first 60 characters fit but no more.");
 			Line flowback2 = Line("a");
 			REQUIRE(acceptor.accept_flowback(flowback, 60) == true);
+			//                               	      0         10        20        30        40        50        60        70        80
 			REQUIRE(acceptor.get_string() == std::string("This is a flowback line and only the first 60 characters fit "));
 			REQUIRE(acceptor.accept_flowback(flowback2, 60) == false);
 		}

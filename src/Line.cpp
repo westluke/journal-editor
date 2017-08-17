@@ -53,82 +53,42 @@ bool Line::relieve_excess(Line &ln, Line::index_type line_width){
 	return true;
 }
 
-// RETHING TESTING PATHS
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-// RETHING TESTING PATHS
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-// ln could be empty
-// the line could be all whitespace for that first for, so it arrives at ln.text.size
-// the line could  be all character for that second for
-// the line could start with some whitespace and then jump past a word, where that word fits
-// the line could start with some whitespace and then jump past a word, where that word doesn't fit and it has to revert. Make that two words actually.
-// it could also not start with whitespace and do those things, but I don't think i need to test that.
-// well, test it just once.
-//
-// so, thats 6 test cases. good!
-//
-//
-// NOPE: our line could already be full (do we test that? should I test that at the beginning?) no, because we can always flow back whitespace.
 bool Line::accept_flowback(Line &ln, Line::index_type line_width){
 	// This shouldn't ever be able to happen.
 	assert((line_width > 0));
 
 	// On the other hand, its possible that we attempt to flow back from an empty line.
+	// But I could just as well return true here? Nah return false, nothing was moved.
 	if (ln.text.size() == 0) return false;
 	
-	Line::index_type i = 0, last_index = 0;
+	Line::index_type i = 0;
 
-	// Better way:
-	// advance one character at a time. We have a few conditions to check. Is it whitespace? Is the index past the end of ln? Do we have space left in the line?
-	// When we reach the first invalid index, we copy up to that point.
+	// Pretend we are allowed to break in the middle of words. Find the first character that cannot be included in the break. Set i to that position.
 	while (true){
-		// jump past the rest of the whitespace, arriving on first non-whitespace or on ln.text.size().
-		for (; i < ln.text.size() && ln.text[i].isspace(); i++);
-
-		// jump past the rest of the word, arriving on first whitespace after a word or on ln.text.size().
-		for (; i < ln.text.size() && !ln.text[i].isspace(); i++);
-		
-		// if the current size doesn't fit, use the last index.
-		if ((i > line_width - text.size()) || (i == ln.text.size())) break;
-
-		last_index = i;
+		if (i == ln.text.size()) break;
+		if (	((text.size() > line_width) || (i >= line_width - text.size())) &&
+			!ln.text[i].isspace()) break;
+		i++;
 	}
 
+	// i will be zero here only if text.size() is the same as line_width and the first character is non-space.
+	if (i == 0) return false;
 
-	// hrm whats going on here. comment this better.
-	for (; ln.text[last_index].isspace() && last_index < ln.text.size(); last_index++);
+	// We only need to take further action if i lies in the middle of a word.
+	if (i != ln.text.size() && !ln.text[i-1].isspace()){
 
-	if (last_index == 0) return false;
+		while (true){
+			i--;
+			if (ln.text[i].isspace()){
+				i++;	// Stop at the character just after the whitespace.
+				break;
+			}
+			if (i == 0) return false; // We can't break if the characters continue all the way to the beginning.
+		}
+	}
 
-	text.insert(text.end(), ln.text.begin(), ln.text.begin() + last_index);
-	ln.text.erase(ln.text.begin(), ln.text.begin() + last_index);
+	text.insert(text.end(), ln.text.begin(), ln.text.begin() + i);
+	ln.text.erase(ln.text.begin(), ln.text.begin() + i);
 	return true;
 }
 
