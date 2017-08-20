@@ -4,6 +4,12 @@
 #include <cassert>
 
 
+// JUST REALIZED SOMETHING. Right now, I'm relying on these paragraphs being in a perfect state every time, which might work well in production.
+// But, there's a slightly slower, possibly much saner method. Insert characters normally, then QUICKLY ensure correctness of entire paragraph every time.
+// It's something that could probably be easily optimized out if it proves to slow the program down, but makes coding this part extremely easy.
+// let's try it.
+
+
 /* Invalid states:
  * If there is an empty line and more than one line
  * If any line exceeds with non-whitespace

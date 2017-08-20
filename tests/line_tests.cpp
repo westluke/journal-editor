@@ -1,5 +1,8 @@
-#include "Line.hpp"
-#include "catch.hpp"
+#include "../src/line.hpp"
+
+#define CATCH_CONFIG_MAIN
+
+#include "../lib/catch.hpp"
 #include <iostream>
 #include <sstream>
 #include <string>

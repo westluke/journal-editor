@@ -2,6 +2,11 @@
 objects/
 objects/*
 
+# Don't keep the executables. Can easily recompile each time.
+# However, still need the makefile in execs
+execs/*
+!execs/makefile
+
 # Don't keep my notes files. They're not usually relevant to the current state of the project.
 notes/
 notes/*
