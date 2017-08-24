@@ -2,6 +2,7 @@
 
 //#define NDEBUG
 #include <cassert>
+#include <iostream>
 
 void print(TextStyle a){
 	std::cout << static_cast<int>(a) << std::endl;
@@ -11,13 +12,26 @@ Line::index_type Line::line_length(){
 	return text.size();
 }
 
+//AHAH WHAT IF THE LINE IS EMPTY
 bool Line::exceeds_width_non_whitespace(Line::index_type line_width){
-	for (int i = text.size() - 1; i >= line_width; i--){
+//	std::cout << std::endl;
+	for (int i = text.size() - 1; i >= 0 && i >= line_width; i--){
 		if (!text[i].isspace()){
 			return true;
 		}
+		//std::cout << "line_width: " << line_width << "    index: " << i << std::endl;
 	}
 	return false;
+}
+
+bool Line::equalize(Line &ln, Line::index_type line_width){
+	// Guaranteed to move something from this line to the next, leaving this one under the limit,
+	// with no whitespace on the next line.
+	if (exceeds_width_non_whitespace(line_width))
+		return relieve_excess(ln, line_width);
+	// Not guaranteed to move anything back, but still ensures that the second line has no leading whitespace.
+	else
+		return accept_flowback(ln, line_width);
 }
 
 
@@ -142,3 +156,7 @@ Line::Line(const Line::text_type &t): text(t) {}
 Line::Line(const std::string &str): text(string_to_text_type(str)) {}
 Line::Line(const char *str): text(string_to_text_type(std::string(str))) {}
 Line::Line(): text() {}
+
+bool Line::operator==(const Line &ln) const{
+	return text == ln.text;
+}

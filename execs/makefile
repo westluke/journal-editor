@@ -1,16 +1,25 @@
 VPATH = ../objects:../src:../lib:../tests
 CC = g++ -Wall -std=c++11
 
-all: line_tests
+all: line_tests paragraph_tests
 
 line_tests: line.o line_tests.o define_catch.o
 	$(CC) ../objects/line.o ../objects/line_tests.o ../objects/define_catch.o -o line_tests
+
+paragraph_tests: line.o paragraph.o paragraph_tests.o define_catch.o
+	$(CC) ../objects/line.o ../objects/paragraph.o ../objects/paragraph_tests.o ../objects/define_catch.o -o paragraph-tests
 
 ../objects/line.o: line.cpp line.hpp
 	$(CC) -c ../src/line.cpp -o ../objects/line.o
 
 ../objects/line_tests.o: line_tests.cpp line.hpp catch.hpp
 	$(CC) -c ../tests/line_tests.cpp -o ../objects/line_tests.o
+
+../objects/paragraph.o: paragraph.cpp paragraph.hpp line.hpp
+	$(CC) -c ../src/paragraph.cpp -o ../objects/paragraph.o
+
+../objects/paragraph_tests.o: paragraph_tests.cpp paragraph.hpp line.hpp catch.hpp
+	$(CC) -c ../tests/paragraph_tests.cpp -o ../objects/paragraph_tests.o
 
 ../objects/define_catch.o: define_catch.cpp catch.hpp
 	$(CC) -c ../src/define_catch.cpp -o ../objects/define_catch.o

@@ -3,11 +3,35 @@
 // #define NDEBUG
 #include <cassert>
 
+// I'm actually ready to start building the visual interface, very simply at first of course.
+// I've got to think about how that works. Something has to keep track of each paragraph and where the cursor is, so it can update the paragraphs properly.
+// And something has to be displaying stuff to the screen. Forget the display optimizations for now, display everything every time.
+// So, let's figure out how to display selected paragraphs to the screen. Also, how do I handle resize events again? I think I just handle them like normal keypresses.
+// Another thing: make this thing permit an initializer list interface to make testing easier.
+//
+// How do I make displaying easy? I want to build this up slowly. Let's actually start with displaying lines. That way I don't have to test this paragraph yet until
+// it's easier to do. I could actually implement character insertion using lines only. 
+//
+// I think the display program should be an instance of a class, since I could have several windows. Makes sense to be initialized with the particular window.
+// And then, we simply have a public method that takes a Line and a number, and prints out that line on that line number. done.
+//
+//
+//
 
 // JUST REALIZED SOMETHING. Right now, I'm relying on these paragraphs being in a perfect state every time, which might work well in production.
 // But, there's a slightly slower, possibly much saner method. Insert characters normally, then QUICKLY ensure correctness of entire paragraph every time.
 // It's something that could probably be easily optimized out if it proves to slow the program down, but makes coding this part extremely easy.
 // let's try it.
+// this function also returns a bool if it took any weird action.
+// So how does it work?
+// One single pass.
+// After the first line, removes empty lines.
+// How does it deal with overflows? A line overflow is illegal, but so is the potential of flowback.
+//
+// Another idea: using overflow and accept_flowback is a little silly since they accomplish basically the same
+// thing: equalizing between two lines. and they occur in the same situations. Is there any reason not to? Could this be made more efficient or cleaner if I didn't?
+// Possibly, if I optimize.
+// But this makes everything easier to conceptualize, so this is what I will do.
 
 
 /* Invalid states:
@@ -44,78 +68,72 @@
 
 bool Paragraph::valid(){
 	for (int i = 0; i < lines.size(); i++){
-		if (lines[i].size() == 0 && i != 0) return false;
+		if (lines[i].line_length() == 0 && i != 0) return false;
 		if (lines[i].exceeds_width_non_whitespace(line_width)) return false;
-		if (i > 0 && lines[i-1].accept_flowback(lines[i], line_width)) return false;
+		if (i > 0 && lines[i-1].equalize(lines[i], line_width)) return false;
 	}
 	return true;
 }
 
+bool Paragraph::distribute(){
+	bool changed = false;
+
+	// Go through each line. If a line is empty, remove it.
+	// Otherwise, equalize that line with the following line.
+	for (int i = 0; i < lines.size(); i++){
+		// Remove a line if its empty, but not if that line is the only line.
+		if (lines[i].line_length() == 0 && lines.size() > 1){
+			lines.erase(lines.begin() + i);
+			i--;
+			changed = true;
+			continue;
+		}
+
+		if (i < lines.size() - 1){
+			changed = changed || lines[i].equalize(lines[i+1], line_width);
+		}
+	}
+
+	// Now, the last line could have too much text. Keep equalizing and adding lines until we have enough space.
+	while (lines[lines.size()-1].exceeds_width_non_whitespace(line_width)){
+		lines.push_back(Line());
+		lines[lines.size()-2].equalize(lines[lines.size()-1], line_width);
+		changed = true;
+	}
+
+	assert((valid()));
+	return changed;
+}
+
 void Paragraph::insert_ch(p_index i, int ch){
 	assert((valid()));
-	fchar fch;
-	fch.character = ch;
+
+	fchar fch = fchar(ch);
 
 	// Verify that the p_index is valid.
 	assert((i.line_no < lines.size() && i.ch_index <= lines[i.line_no].line_length()));
 	
-	if (lines.at(0).line_length() == 0){
-		assert(lines.size() == 1);
+	if (lines.at(0).line_length() == 0)
 		fch.style = initial_style;
-	} else if (!(i.line_no == 0 && i.ch_index == 0)) {
-		fchar prev_char = get_ch(previous_index(i));
-		fch.style = prev_char.style;
-	} else {
-		fchar next_char = get_ch(next_index(i));
-		fch.style = next_char.style;
-	}
+	else if (!(i.line_no == 0 && i.ch_index == 0))
+		fch.style = get_ch(previous_index(i)).style;
+	else
+		fch.style = get_ch(next_index(i)).style;
 
 	lines.at(i.line_no).insert_ch(i.ch_index, fch);
-
-	// Wait no I should stop relieving excess as soon as the relief fails.
-	int i = i.line_no;
-	for (; i < lines.size() - 1; i++){
-		// If a relief fails, we can return immediately.
-		if (!(lines[i].relieve_excess(lines[i+1], line_width)))
-			return;
-	}
-
-	while (lines[i].exceeds_width_non_whitespace(line_width)){
-		lines.push_back(Line());
-		lines[i].relieve_excess(lines[i+1], line_width);
-		i++;
-	}
+	distribute();
 	assert((valid()));
 }
 
-char Paragraph::delete_ch(p_index i){
+fchar Paragraph::delete_ch(p_index i){
+	assert((valid()));
 	assert((i.line_no < lines.size() && i.ch_index < lines[i.line_no].line_length()));
 
-	lines.at(i.line_no).delete_ch(i.ch_index);
+	fchar ch = lines.at(i.line_no).delete_ch(i.ch_index);
+	distribute();
 
-	if (i.line_no){
-		lines.at(i.line_no - 1).accept_flowback(lines.at(line_no));
-	}
-
-	int ind = i.line_no + 1;
-	while (ind < lines.size() && lines.at(ind - 1).accept_flowback(ind)) {
-		ind++;
-	}
-
-	if (ind >= lines.size()){
-		// flowed back from the last line.
-		// but wait what happens if there are multiple empty lines at the end? Is that possible?
-		// Also, wait, what if you flow back to a line, and then that line is eligible to flow back to the previous? Is that possible?
-		// I think so, but only if was already in an invalid state. I should define what the state of this thing must be, and what invalid is,
-		// and how to make sure its always valid.
-		// Maybe I should set up those test cases.
-	}
-
-
-	// When i delete a character, its possible I deleted it from a word at the beginning of a line, which means its possible the previous
-	// line can now accept flowback. I should try it. Thats the only previous line that must be considered. AFTER I DO THAT,
-	// I must check if the current line can accept flowback, and move forwards from there until lines stop accepting flowback.
-	// It's also now possible that lines at the front could become empty, in which case they must be deleted.
+	assert((valid()));
+	return ch;
 }
 
 fchar Paragraph::get_ch(p_index i){
@@ -138,6 +156,7 @@ p_index Paragraph::previous_index(p_index i){
 	} 
 
 	// If i points to the first character (and there is no previous index) it gets returned unchanged.
+	// But ideally this shouldn't happen, which is why we have an assert that checks for it.
 	return i;
 }
 
@@ -149,15 +168,29 @@ p_index Paragraph::next_index(p_index i){
 	return i;
 }
 
-bool apply_format(p_index start, p_index end, Format f);
+//bool apply_format(p_index start, p_index end, Format f);
 
-std::vector<Line::text_type> get_lines();
+std::vector<Line> Paragraph::get_lines(){
+	return lines;
+}
 
-void set_line_width(Line::index_type lw);
+void Paragraph::set_line_width(Line::index_type lw){
+	assert(lw != 0);
+	line_width = lw;
+}
 
-void set_header_level(HeaderLevel hl);
-
+//void set_header_level(HeaderLevel hl);
 
 Paragraph::Paragraph(Line::index_type lw): line_width(lw){
 	;
+}
+
+Paragraph::Paragraph(std::initializer_list<Line> il, Line::index_type lw): line_width(lw), lines(il){
+	;
+}
+
+Paragraph::Paragraph(std::initializer_list<char*> il, Line::index_type lw): line_width(lw){
+	for (auto iter = il.begin(); iter != il.end(); iter++){
+		lines.push_back(Line(*iter));
+	}
 }

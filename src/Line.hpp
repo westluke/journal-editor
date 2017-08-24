@@ -5,7 +5,6 @@
 #include <cctype>
 #include <string>
 #include <cassert>
-#include <iostream>
 
 enum class TextStyle: unsigned {
 	none = 0x00,
@@ -38,6 +37,9 @@ inline TextStyle operator~(TextStyle a){
 	return static_cast<TextStyle>(~static_cast<char>(a));
 }
 
+
+
+
 struct fchar {
 	int character;
 	TextStyle style;
@@ -54,20 +56,25 @@ struct fchar {
 	fchar (int c, TextStyle t): character(c), style(t){}
 };
 
-// The vector operations don't throw their own errors, so I have to do that myself!
-// A Line can be empty.
-//
-// functions to add:
-// overloaded insert_ch for character
-// change_style functions
-//
+
+
+
 class Line {
 	public:
+		// Used in place of strings to store formatted text.
 		typedef std::vector<fchar> text_type;
+		// Guaranteed to be big enough to hold the size of our formatted "string" vectors.
 		typedef std::vector<fchar>::size_type index_type;
 
+		// The length of the line, including whitespace.
 		index_type line_length();
+		// Whether or not the line exceeds this width, not counting whitespace at the end.
 		bool exceeds_width_non_whitespace(index_type line_width);
+
+		// Either move excess text from this line to the one specified, or flow whitespace/text back.
+		// In the end, the first line is guaranteed to not exceed line_width, and the second line is guaranteed to have
+		// no preceding whitespace.
+		bool equalize(Line &ln, index_type line_width);
 
 		// Changes the state of both lines, but preserves all characters between them.
 		bool relieve_excess(Line &ln, index_type line_width);
@@ -89,6 +96,7 @@ class Line {
 		Line(const char *str);
 		Line();
 
+		bool operator==(const Line &ln) const;
 	private:
 		text_type text;
 };

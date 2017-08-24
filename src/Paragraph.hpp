@@ -1,7 +1,8 @@
 #ifndef PARAGRAPH_HPP
 #define PARAGRAPH_HPP
 
-#include "Line.hpp"
+#include "line.hpp"
+#include <initializer_list>
 
 // Used to define font size of paragraph.
 enum class HeaderLevel {none, h1, h2, h3};
@@ -23,26 +24,32 @@ class Paragraph{
 	public:
 		void insert_ch(p_index i, int ch);
 		char replace_ch(p_index i, int ch);
-		char delete_ch(p_index i);
+		fchar delete_ch(p_index i);
+
+		bool distribute();
+		bool valid();
 
 		void set_header_level(HeaderLevel hl);
 		bool apply_format(p_index start, p_index end, TextStyle f);
 
 		void set_line_width(Line::index_type lw);
 
-		p_index previous_index(p_index i);
-
 		fchar get_ch(p_index i);
-		std::vector<Line::text_type> get_lines();
+		std::vector<Line> get_lines();
 
 		// Constructor
 		Paragraph(Line::index_type lw);
+		Paragraph(std::initializer_list<Line> il, Line::index_type lw);
+		Paragraph(std::initializer_list<char*>, Line::index_type lw);
 
 	private:
 		Line::index_type line_width;
 		std::vector<Line> lines;
 		HeaderLevel h_level;
 		TextStyle initial_style;
+
+		p_index previous_index(p_index i);
+		p_index next_index(p_index i);
 };
 
 #endif

@@ -1,11 +1,9 @@
 #include "../src/line.hpp"
 
-#define CATCH_CONFIG_MAIN
-
 #include "../lib/catch.hpp"
-#include <iostream>
-#include <sstream>
 #include <string>
+
+// Didn't test equalize() here yet, since equalize() is a very simple combination of relieve_excess and accept_flowback.
 
 SCENARIO ("TextStyles can be operated on with bitwise operators") {
 	GIVEN ("Some TextStyle values") {
