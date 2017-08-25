@@ -1,3 +1,6 @@
+#ifndef READER_HPP
+#define READER_HPP
+
 #include <ncurses.h>
 #include "printer.hpp"
 
@@ -13,3 +16,4 @@ class Reader {
 		Printer prnt;
 };
 
+#endif

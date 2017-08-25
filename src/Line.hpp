@@ -63,7 +63,7 @@ class Line {
 	public:
 		// Used in place of strings to store formatted text.
 		typedef std::vector<fchar> text_type;
-		// Guaranteed to be big enough to hold the size of our formatted "string" vectors.
+		// Guaranteed to be big enough to hold the size of our formatted "string" vectors. Used to hold index of fchar within text.
 		typedef std::vector<fchar>::size_type index_type;
 
 		// The length of the line, including whitespace.
