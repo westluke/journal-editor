@@ -3,6 +3,8 @@
 
 #include <string>
 #include <ncurses.h>
+#include "paragraph.hpp"
+#include "line.hpp"
 
 
 
@@ -30,13 +32,17 @@
 //
 // And in a sense the line number is a part of the text representation, so this is fine. The textmanager stores them in its own objects.
 //
+//
+//printer, reader, and updater cannot be unit-tested.
 
 class Printer {
 	public:
 		Printer();
 		~Printer();
-		void print(std::string s, int line);
-		void print(Paragraph p, int line)
+		void print(std::string s, Paragraph::index_type line_no);
+
+		void print(Line::text_type txt, Paragraph::index_type line_no);
+		void print(Paragraph p, int line);
 
 	private:
 		WINDOW* win;

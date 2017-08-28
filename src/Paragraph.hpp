@@ -7,27 +7,31 @@
 // Used to define font size of paragraph.
 enum class HeaderLevel {none, h1, h2, h3};
 
-// Defines a location within a paragraph.
-struct p_index {
-	std::vector<Line>::size_type line_no;
-	Line::index_type ch_index;
-};
+struct p_index;
+
 
 // The real fundamental unit of text. Composed of Lines, but those Lines may pass text between each other.
-// The text of a Paragraph is unchanged without explicit user action.
-// Paragraphs created with each ENTER character typed.
-// May be empty.
-// What does empty paragrpaph mean? one line, empty? or no lines?
-// Pretty sure it should be one line, empty.
-// Because every line corresponds to a line on the xcreen.
+// Cannot contain zero lines, may contain a single empty line.
 class Paragraph{
 	public:
 		typedef std::vector<Line>::size_type index_type;
 
+		// Simple text modifications
 		void insert_ch(p_index i, int ch);
-		char replace_ch(p_index i, int ch);
+		void insert_ch(p_index i, fchar ch);
+		fchar replace_ch(p_index i, int ch);
+		fchar replace_ch(p_index i, fchar ch);
 		fchar delete_ch(p_index i);
 
+		void insert_str(p_index i, std::string str);
+		std::string delete_str(p_index i, Line::index_type length);
+		std::string replace_str(p_index i, std::string str);
+
+		void insert_text(p_index i, Line::text_type txt);
+		Line::text_type delete_text(p_index i, Line::index_type length);
+		Line::text_type replace_text(p_index i, Line::text_type txt);
+
+		// Distribute
 		bool distribute();
 		bool valid();
 
@@ -102,5 +106,11 @@ class Paragraph{
 //
 // Wait this is silly. the data structures of the window ARE the recorded changes. They are committed by refresh(). I'm an idiot. Don't record changes at all.
 // Update() takes request, immediately makes changes to BOTH the paragraph and the internal model.
+
+// Defines a location within a paragraph.
+struct p_index {
+	Paragraph::index_type line_no;
+	Line::index_type ch_index;
+};
 
 #endif

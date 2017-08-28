@@ -1,6 +1,6 @@
 #include "reader.hpp"
 
-Reader::Reader(WINDOW* w, Printer p): win(w), prnt(p) {
+Reader::Reader(WINDOW* w, Printer p, Updater up): win(w), print(p), updater(up) {
 	;
 }
 
@@ -21,9 +21,10 @@ void Reader::loop(){
 	while (true){
 		input = getch();
 		//erase();
-		prnt.print(std::to_string(input), 0);
-
+		updater.insert_ch(input);
+		/*
 		if (input == KEY_RESIZE){
 		}
+		*/
 	}
 }
