@@ -1,25 +1,16 @@
 #include "line.hpp"
+#include "text.hpp"
 
 //#define NDEBUG
 #include <cassert>
 
 
 
-
-// Printing operator for TextStyle
-std::ostream& operator<<(std::ostream& os, const TextStyle& ts){
-	os << static_cast<int>(ts);
-	return os;
-}
-
-
-
-
-Line::index_type Line::size(){
+text_index Line::size() const{
 	return text.size();
 }
 
-bool Line::exceeds_width_non_whitespace(Line::index_type line_width){
+bool Line::exceeds_width_non_whitespace(text_index line_width) const{
 	// Go backwards from the end of the line until the technical line limit, where the line should end.
 	// If you hit anything that isn't whitespace, the line is too long.
 	for (int i = text.size() - 1; i >= 0 && i >= line_width; i--){
@@ -32,13 +23,13 @@ bool Line::exceeds_width_non_whitespace(Line::index_type line_width){
 
 // JUST REALIZED: right now, paragaph takes care of using the proper format, like the one that came before this character.
 // Maybe Line should do that instead. NOPE, cuz Line doesn't and can't know the starting format. All text that comes in MUST be formatted, or have a format specified.
-void Line::insert_ch(Line::index_type i, fchar fch){
+void Line::insert_ch(text_index i, fchar fch){
 	assert((i <= text.size()));
 	text.insert(text.begin() + i, fch);
 	mark_changed();
 }
 
-fchar Line::delete_ch(Line::index_type i){
+fchar Line::delete_ch(text_index i){
 	assert((i < text.size()));
 	fchar ret = text[i];
 	text.erase(text.begin() + i);
@@ -46,56 +37,45 @@ fchar Line::delete_ch(Line::index_type i){
 	return ret;
 }
 
-fchar Line::replace_ch(Line::index_type i, fchar ch){
+fchar Line::replace_ch(text_index i, fchar ch){
 	fchar ret = delete_ch(i);
 	insert_ch(i, ch);
 	mark_changed();
 	return ret;
 }
 
-//void Line::insert_str(Line::index_type i, std::string str, TextStyle style = TextStyle::none);
-//std::string Line::delete_str(Line::index_type i, Line::index_type length);
-//std::string Line::replace_str(Line::index_type i, std::string str, TextStyle style = TextStyle::none);
+//void insert_str(index_type i, std::string str, TextStyle style = TextStyle::none);
+//std::string delete_str(index_type i, index_type length);
+//std::string replace_str(index_type i, std::string str, TextStyle style = TextStyle::none);
 
-//void Line::insert_text(Line::index_type i, Line::text_type t);
-//
-fchar Line::get_ch(Line::index_type i){
+//void insert_text(index_type i, text_type txt);
+//text_type delete_text(index_type i, index_type length);
+//text_type replace_text(index_type i, text_type txt);
+
+//void change_ch_style(index_type i, TextStyle style);
+//void change_style(index_type start, TextStyle style);
+//void change_style(index_type start, index_type end, TextStyle style);
+
+fchar Line::get_ch(text_index i) const{
 	return text.at(i);
 }
 
-Line::text_type Line::get_text() {
+text_type Line::get_text() const {
 	return text;
 }
+
+//text_type get_text(index_type start) const;
+//text_type get_text(index_type start, index_type end) const;
 
 std::string Line::get_string() const {
 	return text_type_to_string(text);
 }
 
-Line::text_type Line::string_to_text_type(const std::string &str){
-	text_type t;
-	for (auto ch : str){
-		t.push_back(fchar(ch));
-	}
-	return t;
-}
-
-Line::text_type Line::string_to_text_type(const char *str){
-	std::string new_str = std::string(str);
-	text_type t;
-	for (auto ch : new_str){
-		t.push_back(fchar(ch));
-	}
-	return t;
-}
-
-std::string Line::text_type_to_string(const Line::text_type &t){
-	std::string str;
-	for (auto fch : t) str.push_back(fch.character);
-	return str;
-}
+// std::string get_string(index_type start) const;
+// std::string get_string(index_type start, index_type end) const;
 
 
-Line::Line(const Line::text_type &t): text(t), changed(true) {}
+Line::Line(const text_type &t): text(t), changed(true) {}
 Line::Line(const std::string &str): text(string_to_text_type(str)), changed(true) {}
 Line::Line(const char *str): text(string_to_text_type(std::string(str))), changed(true) {}
 Line::Line(): text(), changed(true) {}
@@ -104,21 +84,14 @@ bool Line::operator==(const Line &ln) const{
 	return text == ln.text;
 }
 
-
-bool Line::was_changed(){
+bool Line::was_changed() const{
 	return changed;
 }
 
-void Line::clear_changes(){
-	changed = false;
-}
-
-void Line::mark_changed(){
-	changed = true;
-}
+// bool _clear_changed_flag();
 
 //TODO: I think the relationships between equalize and relieve_excess and flowback are inefficient. FIX THAT
-bool Line::equalize(Line &ln, Line::index_type line_width){
+bool Line::equalize(Line &ln, text_index line_width){
 	// Guaranteed to move something from this line to the next, leaving this one under the limit,
 	// with no whitespace on the next line.
 	if (exceeds_width_non_whitespace(line_width))
@@ -129,7 +102,7 @@ bool Line::equalize(Line &ln, Line::index_type line_width){
 }
 
 
-bool Line::relieve_excess(Line &ln, Line::index_type line_width){
+bool Line::relieve_excess(Line &ln, text_index line_width){
 	// This shouldn't be able to happen, so we assert.
 	assert((line_width > 0));
 
@@ -137,7 +110,7 @@ bool Line::relieve_excess(Line &ln, Line::index_type line_width){
 	if (line_width >= text.size()) return false;
 
 	// Unfortunately have to do this in order to check that i becomes negative.
-	Line::index_type i;
+	text_index i;
 	if (text[line_width].isspace()){
 		for (i = line_width + 1; text[i].isspace() && i < text.size(); i++);
 		// Now, i points to first non-whitespace character after line_width OR to text.size().
@@ -162,7 +135,7 @@ bool Line::relieve_excess(Line &ln, Line::index_type line_width){
 	return true;
 }
 
-bool Line::accept_flowback(Line &ln, Line::index_type line_width){
+bool Line::accept_flowback(Line &ln, text_index line_width){
 	// This shouldn't ever be able to happen.
 	assert((line_width > 0));
 
@@ -170,7 +143,7 @@ bool Line::accept_flowback(Line &ln, Line::index_type line_width){
 	// But I could just as well return true here? Nah return false, nothing was moved.
 	if (ln.text.size() == 0) return false;
 	
-	Line::index_type i = 0;
+	text_index i = 0;
 
 	// Pretend we are allowed to break in the middle of words. Find the first character that cannot be included in the break. Set i to that position.
 	while (true){
@@ -203,6 +176,10 @@ bool Line::accept_flowback(Line &ln, Line::index_type line_width){
 	return true;
 }
 
+void Line::mark_changed(){
+	changed = true;
+}
+
 std::ostream& operator<<(std::ostream& os, const Line& ln){
 	os << ln.get_string();
 	return os;
@@ -211,8 +188,6 @@ std::ostream& operator<<(std::ostream& os, const Line& ln){
 
 // make this better
 std::ostream& operator<<(std::ostream& os, const std::vector<Line>& vol){
-	for (auto ln: vol){
-		std::cout << ln << "\n";
-	}
+	for (auto ln: vol) os << ln << std::endl;
 	return os;
 }

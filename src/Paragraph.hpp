@@ -2,115 +2,118 @@
 #define PARAGRAPH_HPP
 
 #include "line.hpp"
+#include "text.hpp"
 #include <initializer_list>
 
 // Used to define font size of paragraph.
 enum class HeaderLevel {none, h1, h2, h3};
 
-struct p_index;
+struct PLOC;
 
+struct numbered_line;
+
+// I can only think of one solution to properly encapsulate Lines, which is to make them a private class of Paragraph.
+// Because no one else needs the functionality of lines, they only need what the Lines produce: rich text, of the type text_type.
+// And then, inside the Line inside Paragraph, I can friend a Paragraph private method to alter lines. Yes?
+// Ah but shit I would need a forward declaration of Line, and then clear_changes would have to take a pointer to a Line.
+// I mean that's fine actually, just sorta weird.
 
 // The real fundamental unit of text. Composed of Lines, but those Lines may pass text between each other.
 // Cannot contain zero lines, may contain a single empty line.
+//
+// SHIT wait this means Line becomes untestable. Or I would have to switch from public to private every time.
+// no fuck that. Keep it out.
+//
+// It has to stay out. So how do I clear lines? Is there any way for that to be a function in Paragraph?
+// Then Paragraph has to be defined before Line. So Line would have to include Paragraph.
+// Which is probably possible, just really fucking confusing.
+// And I'm not giving Paragraph full access to Line, nor am I making the clear changes thing public.
+// And if I make it an external function, then anything that includes Paragraph could use the function, right?
+// Ah but what if it was only included in Paragraph.cpp? NOPE, because Line has to include it.
+//
+// At this point, it's either make it public or find a way to friend a Paragraph function.
+// AGH ok fuck it just make it public with a preceding underscore.
+//
+// And we're keeping the PLOC;
+//
 class Paragraph{
 	public:
-		typedef std::vector<Line>::size_type index_type;
-
-		// Simple text modifications
-		void insert_ch(p_index i, int ch);
-		void insert_ch(p_index i, fchar ch);
-		fchar replace_ch(p_index i, int ch);
-		fchar replace_ch(p_index i, fchar ch);
-		fchar delete_ch(p_index i);
-
-		void insert_str(p_index i, std::string str);
-		std::string delete_str(p_index i, Line::index_type length);
-		std::string replace_str(p_index i, std::string str);
-
-		void insert_text(p_index i, Line::text_type txt);
-		Line::text_type delete_text(p_index i, Line::index_type length);
-		Line::text_type replace_text(p_index i, Line::text_type txt);
+		// Returns length of paragraph in number of lines.
+		line_number size();
 
 		// Distribute
-		bool distribute();
 		bool valid();
+		bool distribute();
+
+		// Simple text modifications
+		void insert_ch(PLOC i, int ch);
+		void insert_ch(PLOC i, fchar ch) // NOT IMPLEMENTED;
+		fchar replace_ch(PLOC i, int ch) // NOT IMPLEMENTED;
+		fchar replace_ch(PLOC i, fchar ch) // NOT IMPLEMENTED;
+		fchar delete_ch(PLOC i);
+
+		// NOT IMPLEMENTED
+		void insert_str(PLOC i, std::string str);
+		std::string delete_str(PLOC i, text_index length);
+		std::string replace_str(PLOC i, std::string str);
+
+		// NOT IMPLEMENTED
+		void insert_text(PLOC i, text_type txt);
+		text_type delete_text(PLOC i, text_index length);
+		text_type replace_text(PLOC i, text_type txt);
+
 
 		void set_header_level(HeaderLevel hl);
-		bool apply_format(p_index start, p_index end, TextStyle f);
+		bool apply_format(PLOC start, PLOC end, TextStyle f);
 
-		void set_line_width(Line::index_type lw);
+		void set_line_width(text_index lw);
 
-		fchar get_ch(p_index i);
+		fchar get_ch(PLOC i);
 		std::vector<Line> get_lines();
+		std::vector<numbered_line> get_changed_lines();	// Returns these lines and clears them.
 
 		// Constructor
-		Paragraph(Line::index_type lw);
-		Paragraph(std::initializer_list<Line> il, Line::index_type lw);
-		Paragraph(std::initializer_list<char*>, Line::index_type lw);
+		Paragraph(text_index lw);
+		Paragraph(std::initializer_list<Line> il, text_index lw);
+		Paragraph(std::initializer_list<char*>, text_index lw);
 
 	private:
-		Line::index_type line_width;
+		text_index line_width;
 		std::vector<Line> lines;
 
 		HeaderLevel h_level;
 		TextStyle initial_style;
 
-		p_index previous_index(p_index i);
-		p_index next_index(p_index i);
+		PLOC previous_index(PLOC i);
+		PLOC next_index(PLOC i);
 
 		// Records where on the page this paragraph begins.
 		int line_no;
 };
 
-// hrmmmm shit gotta think about this more.
-// What if a shift occurs and invalidates the changed_lines? Well it can only invalidate things AFTER the shift. All that means is that when the shift is set,
-// we ONLY use the shift to update past the shift, because otherwise we could get into segfault territory.
-// Question: the shift is all well and good when lines have been added. In that case, the shift_point is the index of the inserted line.
-// But what about when the change is just that the last line has been deleted? In that case the shift_point points one past the end of the paragrpah.
-// I suppose that makes some sense, in that its informative about how to deal with the next paragraphs.
-// But how would this actually work? and is there a better altnerative?
-//
-// Something has a refresh function, perhaps the printer. It is fed paragraphs. WAAAIIIT a sec. is that a good idea? To shove all the content intp a function every refresh?
-// It could be done by reference. Still, that seems silly.
-//
-// could use wnoutrefresh and sorta dispense with these stored updates.
-// Could also use ncurses's capability to do character insertion, string insertion, and line insertion (insdelln, insertln) instead of rewriting lines
-//
-// There's something I want to be very careful about here. The object changing the text should also be the one controlling updates to the screen, and reader won't be smart enough to do both.
-//
-// TextManager is unsuited for that. What is this really? Some sort of Updater, perhaps also in control of refresh(), in which case textmanager is unnecessary.
-// Sorta takes over the function of TextManager in a way that makes more sense.
-//
-//
-//So what's the flow? Reader accepts a char, determines what to do with it. Frequently, it's a simple insertion, so that gets sent to Update, which internally contains all the paragraphs. Before it does that, Update will need to know where in the paragraphs to change, and reader only knows the cursor position.
-//So reader asks Display for the meaning of that cursor position, and Display tells it the paragraph index.
-//Now, Update can make the change, but it doesn't refresh immediately.
-//When it's time to refresh, Update considers the changed and changes the display (through Display) as efficiently as possible.
-//
-//How does it consider the changes? Let's consider the changes that COULD be made. In general, we have replacement, insertion, and deletion.
-//Those apply to characters, lines, strings within a line, strings across lines, and paragraphs. It must be able to handle an arbitrary number of these random changes,
-//quickly.
-//
-//
-//So, how do we do it? Firstly, we should probably move from the front to the back, yes. Consider why.
-// Possibly just simpler to think about, but actually maybe less efficient?
-// If I start from the back, and make replacements and such, and later encounter something that shifts, thats fine.
-// It's the same amount of work as if I started from the front.
-// The difference is, when I start from the back, future line numbers are UNCHANGED, for the most part. As long as I stay in one paragraph, higher paragrpahs are the same.
-// And as long as I stay in one line, higher lines are the same. The same can't be said for moving forward.
-// Any time I DO move into a higher paragraph, as with a long text replacement, I may need to recalculate.
-// Ah but wait I see an issue. If I store updates as I intend, then we can really only update line-by-line, which is simpler but perhaps less efficient.
-//
-// There is another solution, to use that internal refresh before the display refresh, and do it every time. Probably costs the same.
-// In that case, I don't need to record changes at all.
-//
-// Wait this is silly. the data structures of the window ARE the recorded changes. They are committed by refresh(). I'm an idiot. Don't record changes at all.
-// Update() takes request, immediately makes changes to BOTH the paragraph and the internal model.
+// Defines a location within a pargraph; a line, and a character within that line.
+// But it isn't an index, that's the wrong word.
+// I think this could be a good name. Making it lowercase makes it sound too simple.
+// But camelcase implies a class.
+struct PLOC {
+	line_number n;
+       	text_index ind;
+};
 
-// Defines a location within a paragraph.
-struct p_index {
-	Paragraph::index_type line_no;
-	Line::index_type ch_index;
+
+// WHERE DO I PUT THIS
+// This should be ok. Because all I specify in the above definition is THAT the numbered_line is used.
+// I don't specify what it contains. In fact, it could contain anything, and that would be ok.
+// What should I call this? It's a line plus a location. So really, its a line in context, yeah?
+// Well no its not a line, its just text plus a line number.
+//
+// But here it's more than just text, because it is specifically an entire line of text.
+//
+// What do you call text with a position? textloc is wrong.
+
+struct line_at {
+	text_type txt;
+	line_number n;
 };
 
 #endif

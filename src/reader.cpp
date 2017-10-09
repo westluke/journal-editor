@@ -4,6 +4,12 @@ Reader::Reader(WINDOW* w, Printer p, Updater up): win(w), print(p), updater(up) 
 	;
 }
 
+CursorLoc Reader::get_position(){
+	CursorLoc cl;
+	getyx(win, cl.x, cl.y);
+	return cl;
+}
+
 // updates lines normally, paragraphs when distribute() returns true.
 // As I see it, the only fundamental question that remains is how we divide up this remaining work. Everything else is handled really.
 // It seems right for the reader to delegate, not to do.

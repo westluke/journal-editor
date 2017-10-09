@@ -32,7 +32,12 @@ Printer::~Printer(){
 	endwin();
 }
 
-void Printer::print(std::string s, int line){
+void Printer::print(std::string s, Paragraph::index_type line_no){
+	mvprintw(line_no, 0, s.c_str());
+	refresh();
+}
+
+void weird_print(std::string s){
 	static int y = 0;
 	y += 1;
 	y %= 10;
@@ -41,4 +46,8 @@ void Printer::print(std::string s, int line){
 	}
 	mvprintw(y, 0, s.c_str());
 	refresh();
+}
+
+void bottom_iter_print(std::string s){
+	;
 }

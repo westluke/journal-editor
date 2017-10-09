@@ -4,12 +4,19 @@
 #include <ncurses.h>
 #include "printer.hpp"
 #include "updater.hpp"
+#include "paragraph.hpp"
 
+
+struct CursorLoc{
+	Paragraph::index_type x, y;
+}
 
 class Reader {
 	public:
 		Reader(WINDOW* w, Printer p, Updater up);
 		void loop();
+		CursorLoc get_position();
+
 
 	private:
 		WINDOW* win;

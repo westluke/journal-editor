@@ -1,6 +1,6 @@
-#include "CursorPosition.hpp"
-#include "TextManager.hpp"
 
+//			UNUSED
+//
 class Control {
 	public:
 		void loop();

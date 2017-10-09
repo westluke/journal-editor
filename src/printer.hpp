@@ -6,6 +6,36 @@
 #include "paragraph.hpp"
 #include "line.hpp"
 
+class Printer {
+	public:
+		Printer();
+		~Printer();
+		void print(std::string s, Paragraph::index_type line_no);
+
+		void print(Line::text_type txt, Paragraph::index_type line_no);
+		void print(Paragraph p, int line);
+
+		Paragraph::p_index get_index_from_loc(CursorLoc cl);
+
+
+	private:
+		WINDOW* win;
+};
+
+void bottom_iter_print(std::string s);
+
+
+		// I NEED TO SPLIT THESE UP MORE. BECAUSE IM CREATING LOOPS.
+		// RIGHT NOW THERES A LOOP BETWEEN READER AND PRINTER, BECAUSE PRINTER NEEDS CURSORLOC
+		// Ah wait but cursorloc depends on Paragraph
+		// BUT I CAN SOLVE THAT EASILY BY PUTTING CURSORLOC AND OTHER SIMPLE STRUCTURES IN THEIR OWN FILE. WHAT ELSE? TEXTSTYLE DEFINITELY.
+		// NOT P-INDEX DUE TO SIZE TYPES.
+		// fchar definitely, maybe header
+		//
+		// Fuck it, make everything include Lines and Paragraphs too.
+		// That actually makes sense.
+		// 
+		// So how would that work? Well p_index should stay with Paragraph, And so should headerlevel. CursorLoc requires Paragraph, so I could just drop it in the paragraph file as well. That means wherever CursorLoc is defined, Paragraph must be defined too. But really, it's connection to Pargraaph is tangential, so I'm gonna redefine it. getyx uses ints, so i will use ints. How about p_index? nah still gotta use Paragrpah stuff.
 
 
 // How do we define borders here?
@@ -35,17 +65,5 @@
 //
 //printer, reader, and updater cannot be unit-tested.
 
-class Printer {
-	public:
-		Printer();
-		~Printer();
-		void print(std::string s, Paragraph::index_type line_no);
-
-		void print(Line::text_type txt, Paragraph::index_type line_no);
-		void print(Paragraph p, int line);
-
-	private:
-		WINDOW* win;
-};
 
 #endif
