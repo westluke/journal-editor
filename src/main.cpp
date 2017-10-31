@@ -14,10 +14,113 @@ cursor get_cursor(WINDOW* win){
 	return {y, x};
 }
 
-const char ESC_CODE = 27;
+void wmove(WINDOW* win, cursor c){
+	wmove(win, c.y, c.x);
+}
+
+
+void print_line(WINDOW* win, cursor c, text_type &line){
+	wmove(win, c);
+
+	for (auto fch: line){
+		waddch(win, fch.character);
+	}
+}
+
+// BETTER WAY TO DO THIS?
+void print_lines(WINDOW* win, cursor c, std::vector<text_type> &lines){
+	for (auto ln: lines){
+		print_line(win, c, ln);
+		c.y++;
+	}
+	if (lines.size() > 0){
+		int last_length = lines[lines.size() - 1].size();
+		wmove(win, {c.y + lines.size() - 1, c.x + last_length})
+	} else {
+		wmove(win, c);
+	}
+}
+
+void print_para(WINDOW* win, cursor c, Paragraph &p){
+	print_lines(win, c, p.get_lines());
+}
+
+void print_paras(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
+	for (auto p: paras){
+		print_para(win, c, p);
+		c.y += p.size();
+	}
+}
+
+// THESE ARE ALL THE OPERATIONS THAT WE HAVE IN INSERT MODE. IMPLEMENT THEM ALL.
+cursor delete_ch(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
+}
+
+cursor insert_ch(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
+}
+
+cursor insert_tab(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
+}
+
+cursor move_right(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
+}
+
+cursor move_left(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
+}
+
+cursor move_up(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
+}
+
+cursor move_down(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
+}
+
+cursor new_paragraph(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
+}
+
+// Start lets this function handle border offsets.
+void update_paragraph_display(WINDOW* win, cursor start, std::vector<Paragraph> &paras){
+	for (auto p: paras){
+		if (p.was_changed()){
+			std::vector<text_type> &lines
+
+		}
+	}
+	// Check every paragraph for changes, then update at te right places.
+	// That means paragraphs must know when they are changed, like lines.
+
+}
+
+
+
+const int ESC = 27;
+const int ENTER = 13;
+const int DEL = 127;
+
+// Without keypad = true, these become escape sequences.
+const int RIGHT = 261;
+const int LEFT = 260;
+const int UP = 259;
+const int DOWN = 258;
 
 // What should be my sanity check program?  oh shit I need a cursor position for any interaction. well, not really.
-
+//
+//
+// What is the flow? A user presses a key. Based on the key, the cursor, and the paragraphs, we update the paragraphs.
+// Based on the previous cursor and the change made to the paragraphs, we update the cursor. How do we know what change was made?
+// It's not dependent solely on which operation was done, because it also depends on how the paragraph reacts.
+//
+// LEt's redefine an operation real quick. Operations can ONLY change text in contiguous chunks. Otherwise it's a set of multiple operations.
+// With that said, what can we say about cursor positions before and after an operation? The number of characters before the cursor after the operation
+// is equal to the number before, minus the number of characters deleted before the cursor during the operation, plus those added.
+//
+// The calls in the switch shouldn't know how operations are being implemented. So those operations should be changing the cursor.
+// They should return cursors. And we can make the actual calculations function-dependent for efficiency.
+//
+// THEN, we update the display. Based on what? Based SOLELY on the paragraphs.
+//
+// How should we update display? I could check EVERY paragraph for changes, and then update the right lines inside those paragraphs.
+// That does seem like the best move actually. Checking every paragraph for changes is actually a tiny overhead.
+// Yeah, let's do that.
 
 
 int main() {
@@ -37,7 +140,7 @@ int main() {
 	// Except that the maintainers of ncurses are lazy fuckers and notimeout doesn't actually work.
 	// So, do I use escape and wait or just go? Well I like the vim-style way of pressing escape, right? But I could just as easily use ` or jkl as escapes.
 	// Let's keep it on true for now. That way, I don't have to interpret escape sequences at all!
-	keypad(stdscr, false);
+	keypad(stdscr, true);
 	//notimeout(stdscr, true);
 	//
 
@@ -47,19 +150,80 @@ int main() {
 	// That could confuse things, because the sequences include normal alphabetical characters.
 	// We deal with this later, by taking special action whenever the ESC character (27) is received.
 	//mousemask(ALL_MOUSE_EVENTS, nullptr);
-	//
-	//
-	//NCURSES keys start at 400. But normal keys are much earlier. So, for instance, a = 97.
-	//
-	//Goal: support use of normal keys and enter.
-	//So we can make new paragraphs and add to existing paragraphs.
 
 	std::vector<Paragraph>paras = std::vector<Paragraph>();
 	int lw = 20;
 	paras.push_back(Paragraph(lw));
 
 	int input;
+	
 
+	// HOW ARE PARAGRAPHS COPIED?
+	// Well one vector is assigned to another. How? all the elements of the vector are assigned.
+	// So all the Lines are assigned. which means all the text_types are assigned. Which means all the fchars are assigned.
+	// So these are actually nice data structures, they behave nicely. Which means I have to reference them instead of just copying.
+
+	while(true){
+		Paragraph &last = paras[paras.size() - 1];
+		input = getch();
+		cursor c = get_cursor(stdwin);
+
+		switch(input){
+			case ESC:	break;
+			case TAB:	break;
+
+			case ENTER:	paras.push_back(Paragraph(lw));
+					break;
+
+			case DEL:	last.delete_last_ch();
+					werase(stdwin);
+					print_paras(stdwin, c, paras);
+					refresh();
+					break;
+
+			case UP:	wmove(stdwin, c.y-1, c.x);
+					break;
+
+			case DOWN:	wmove(stdwin, c.y+1, c.x);
+					break;
+
+			case RIGHT:	wmove(stdwin, c.y, c.x+1);
+					break;
+
+			case LEFT:	wmove(stdwin, c.y, c.x-1);
+					break;
+
+			default:	last.append_ch(input);
+					werase(stdwin);
+					print_paras(stdwin, c, paras);
+					refresh();
+					break;
+		}
+	}
+}
+
+	/*Paragraph last = paras[paras.size() - 1];
+
+	last.append_ch(97);
+	print_lines(stdwin, 0, last.get_lines());
+	refresh();
+	last.append_ch(97);
+	print_lines(stdwin, 0, last.get_lines());
+	refresh();
+	last.append_ch(97);
+	print_lines(stdwin, 0, last.get_lines());
+	refresh();
+
+	print_lines(stdwin, 0, last.get_lines());
+	refresh();
+	input = getch();
+	endwin();
+	return 0;
+	*/
+
+
+
+	/*
 	while (true){
 		input = getch();
 
@@ -69,26 +233,24 @@ int main() {
 			case KEY_ENTER: paras.push_back(Paragraph(lw));
 					cursor c = get_cursor(stdwin);
 					wmove(stdwin, c.y+1, 0);
-			default:	cursor c = get_cursor(stdwin);
-
-					mvwaddch(stdwin, c.y+1, 0, input);
+					break;
+			default:	Paragraph last = paras[paras.size() - 1];
+					last.append_ch(input);
+					print_lines(stdwin, 0, last.get_lines());
+					refresh();
 					break;
 		}
 
-		//erase();
 		
-		/*
-		if (input == KEY_RESIZE){
-		}
-		*/
+		//if (input == KEY_RESIZE){
+		//}
 
 		if (input == ESC_CODE){
 			endwin();
 			return 0;
 		}
 	}
-}
-
+	*/
 
 
 
@@ -168,4 +330,43 @@ void Control::handle_normal_mode_input (int input){
 	}
 }
 */
+	//
+	//
+	//NCURSES keys start at 400. But normal keys are much earlier. So, for instance, a = 97.
+	//
+	//Goal: support use of normal keys and enter.
+	//So we can make new paragraphs and add to existing paragraphs.
+	//
+	//How do I calculate where a cursor should be?
+	//I could pass the cursor to the paragraph as well as the other data.
+	//I could also calculate a para_cursor by the number of characters offset since the start of the paragraph.
+	//OR, each paragraph operation could return an informative struct that tells you how many lines were added or something.
+	//
+	//I think it might be time for me to get an idea of what sorts of operations I intend to support.
+	//How many modes should I have? normal and insert at least. Colon commands are included in normal mode.
+	//And then visual mode I guess
+	//
+	//insert mode: character insertion, arrow key movement, and escape to normal mode.
+	//normal mode: 	commands to begin inserting (all easy)
+	//		selection commands
+	//		deletion (depends on how many things are deleted, where.)
+	//		copying (easy)
+	//		pasting (depends on how many things are pasted, where.)
+	//		search (relatively easy.)
+	//		movement (markers, gg, etc. all easy.)
+	//
+	//		The only things that make cursor movement tricky are those things that change the text.
+	//		That necessarily means insertion or deletion.
+	//		Insertion or deletion WITHIN a pargraph, of contiguous text, is not too bad. Use paracursor. Repeated
+	//		acts can just be done consecutively, no problem.
+	//
+	//		But what about insertion or deletion ACROSS paragraphs? Actually, in any of these cases I would presume that we have a p_index,
+	//		which makes things much easier. I just don't have it when we append.
+	//
+	//		Wait no im being silly. because cursors will always be dependent on the result of get_changed_lines.
+	//
+	//		I should have a print lines function.
+	//
+	//		Yes, we can associate certain formats with chtype characters, and yes, lines iwll wrap themselves.
+	//		But pooorly, and inconsistently. I have to do it myself.
 

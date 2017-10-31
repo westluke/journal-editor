@@ -39,7 +39,8 @@ struct numbered_line;
 class Paragraph{
 	public:
 		// Returns length of paragraph in number of lines.
-		line_number size();
+		line_number size() const;
+		bool empty();
 
 		// Distribute
 		bool valid();
@@ -47,10 +48,13 @@ class Paragraph{
 
 		// Simple text modifications
 		void insert_ch(PLOC i, int ch);
-		void insert_ch(PLOC i, fchar ch) // NOT IMPLEMENTED;
-		fchar replace_ch(PLOC i, int ch) // NOT IMPLEMENTED;
-		fchar replace_ch(PLOC i, fchar ch) // NOT IMPLEMENTED;
+		void insert_ch(PLOC i, fchar ch); // NOT IMPLEMENTED;
+		fchar replace_ch(PLOC i, int ch); // NOT IMPLEMENTED;
+		fchar replace_ch(PLOC i, fchar ch); // NOT IMPLEMENTED;
 		fchar delete_ch(PLOC i);
+
+		void append_ch(int ch);
+		void delete_last_ch();
 
 		// NOT IMPLEMENTED
 		void insert_str(PLOC i, std::string str);
@@ -62,20 +66,27 @@ class Paragraph{
 		text_type delete_text(PLOC i, text_index length);
 		text_type replace_text(PLOC i, text_type txt);
 
-
+		// NOT IMPLEMENTED
 		void set_header_level(HeaderLevel hl);
 		bool apply_format(PLOC start, PLOC end, TextStyle f);
 
 		void set_line_width(text_index lw);
 
 		fchar get_ch(PLOC i);
-		std::vector<Line> get_lines();
+		std::vector<text_type> get_lines();
+
+		PLOC last_index() const;
+
+		// NOT IMPLEMENTED
 		std::vector<numbered_line> get_changed_lines();	// Returns these lines and clears them.
 
 		// Constructor
 		Paragraph(text_index lw);
 		Paragraph(std::initializer_list<Line> il, text_index lw);
 		Paragraph(std::initializer_list<char*>, text_index lw);
+
+		bool was_changed();
+		void _clear_changed_flag();
 
 	private:
 		text_index line_width;
@@ -86,6 +97,9 @@ class Paragraph{
 
 		PLOC previous_index(PLOC i);
 		PLOC next_index(PLOC i);
+
+		bool changed;
+		void mark_changed();
 
 		// Records where on the page this paragraph begins.
 		int line_no;

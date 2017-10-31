@@ -9,13 +9,22 @@
 // Then start building up main so it actually works!
 // start building the updater functino base.
 
-line_number Paragraph::size(){
+line_number Paragraph::size() const{
 	return lines.size();
 }
 
-// Lines mark themselves changed.
+bool Paragraph::empty() {
+	assert(valid());
+	return (lines.size() == 1 and lines[0].size() == 0);
+}
 
+// Lines mark themselves changed.
+//
+// SEGFAULT. GREAT.
+
+// FIX THIS SO IT CAN BE CONST
 bool Paragraph::valid(){
+	if (lines.size() <= 0) return false;
 	for (int i = 0; i < lines.size(); i++){
 		if (lines[i].size() == 0 && i != 0) return false;
 		if (lines[i].exceeds_width_non_whitespace(line_width)) return false;
@@ -52,6 +61,7 @@ bool Paragraph::distribute(){
 	}
 
 	assert((valid()));
+	mark_changed();
 	return changed;
 }
 
@@ -75,6 +85,7 @@ void Paragraph::insert_ch(PLOC loc, int ch){
 	distribute();
 
 	assert((valid()));
+	mark_changed();
 }
 
 fchar Paragraph::delete_ch(PLOC loc){
@@ -86,10 +97,79 @@ fchar Paragraph::delete_ch(PLOC loc){
 
 	assert((valid()));
 	return ch;
+	mark_changed();
+}
+
+void Paragraph::append_ch(int ch){
+	PLOC loc;
+	loc.n = size() - 1;
+	loc.ind = lines[loc.n].size();
+
+	insert_ch(loc, ch);
+	mark_changed();
+}
+
+void Paragraph::delete_last_ch(){
+	assert(!empty());
+	PLOC loc;
+	loc.n = lines.size() - 1;
+	loc.ind = lines[loc.n].size() - 1;
+	delete_ch(loc);
+	mark_changed();
+}
+
+// MAKE THIS ACTUALLY DO SHIT
+void Paragraph::set_line_width(text_index lw){
+	assert(lw != 0);
+	line_width = lw;
+	distribute();
+	mark_changed();
 }
 
 fchar Paragraph::get_ch(PLOC loc){
 	return lines.at(loc.n).get_ch(loc.ind);
+}
+
+std::vector<text_type> Paragraph::get_lines(){
+	std::vector<text_type> ret;
+
+	for (auto ln: lines) ret.push_back(ln.get_text());
+	return ret;
+}
+
+PLOC Paragraph::last_index() const{
+	PLOC loc;
+	loc.n = size() - 1;
+	loc.ind = lines[loc.n].size();
+	return loc;
+}
+
+Paragraph::Paragraph(text_index lw): line_width(lw){
+	lines.push_back(Line());
+	mark_changed();
+}
+
+Paragraph::Paragraph(std::initializer_list<Line> il, text_index lw): line_width(lw), lines(il){
+	mark_changed();
+}
+
+Paragraph::Paragraph(std::initializer_list<char*> il, text_index lw): line_width(lw){
+	for (auto iter = il.begin(); iter != il.end(); iter++){
+		lines.push_back(Line(*iter));
+	}
+	mark_changed();
+}
+
+bool Paragraph::was_changed(){
+	return changed;
+}
+
+void Paragraph::_clear_changed_flag(){
+	changed = false;
+}
+
+void Paragraph::mark_changed(){
+	changed = true;
 }
 
 // This function doesn't check that the PLOC is valid.
@@ -97,7 +177,7 @@ fchar Paragraph::get_ch(PLOC loc){
 // Can later change this to use bracket operators instead of .at()
 PLOC Paragraph::previous_index(PLOC loc){
 	assert(loc.n < lines.size());
-	assert(loc.ind < lines[loc.n].size());
+	assert(loc.ind <= lines[loc.n].size());
 	assert(!(loc.n == 0 && loc.ind == 0));
 
 	if (loc.ind){
@@ -110,45 +190,5 @@ PLOC Paragraph::previous_index(PLOC loc){
 	// If i points to the first character (and there is no previous index) it gets returned unchanged.
 	// But ideally this shouldn't happen, which is why we have an assert that checks for it.
 	return loc;
-}
-
-// UNUSED
-PLOC Paragraph::next_index(PLOC loc){
-	assert(loc.n < lines.size());
-	assert(loc.ind < lines[loc.n].size());
-
-	loc.ind++;
-	return loc;
-}
-
-//bool apply_format(PLOC start, PLOC end, Format f);
-
-std::vector<Line> Paragraph::get_lines(){
-	return lines;
-}
-
-std::vector<numbered_line> Paragraph::get_changed_lines(){
-
-}
-
-void Paragraph::set_line_width(text_index lw){
-	assert(lw != 0);
-	line_width = lw;
-}
-
-//void set_header_level(HeaderLevel hl);
-
-Paragraph::Paragraph(text_index lw): line_width(lw){
-	lines.push_back(Line());
-}
-
-Paragraph::Paragraph(std::initializer_list<Line> il, text_index lw): line_width(lw), lines(il){
-	;
-}
-
-Paragraph::Paragraph(std::initializer_list<char*> il, text_index lw): line_width(lw){
-	for (auto iter = il.begin(); iter != il.end(); iter++){
-		lines.push_back(Line(*iter));
-	}
 }
 

@@ -1,54 +1,10 @@
+
 #include "../src/line.hpp"
 #include "../lib/catch.hpp"
 #include <string>
 
 // Didn't test equalize() here yet, since equalize() is a very simple combination of relieve_excess and accept_flowback.
-//
-//
 
-std::vector<std::string> text_type_to_string(const std::vector<text_type> &txts){
-	std::vector<std::string> ret;
-
-	for (int i = 0; i < txts.size(); i++){
-		ret.push_back(text_type_to_string(txts[i]));
-	}
-
-	return ret;
-}
-
-
-SCENARIO("Testing split"){
-	SECTION(""){
-		Line l1 = Line("  This is a TEST paragraph    ");
-		Line l2 = Line("Here's another     ");
-		Line l3 = Line("      And another");
-		Line l4 = Line("and one more");
-		Line l5 = Line("      ");
-		Line l6 = Line("Blahblahnospace");
-		Line l7 = Line("");
-
-		std::vector<std::string> result1 = {"  ", "This", " ", "is", " ", "a", " ", "TEST", " ", "paragraph", "    "};
-		std::vector<std::string> result2 = {"Here's", " ", "another", "     "};
-		std::vector<std::string> result3 = {"      ", "And", " ", "another"};
-		std::vector<std::string> result4 = {"and", " ", "one", " ", "more"};
-		std::vector<std::string> result5 = {"      "};
-		std::vector<std::string> result6 = {"Blahblahnospace"};
-		std::vector<std::string> result7 = {};
-
-		REQUIRE(text_type_to_string(l1.split_text()) == result1);
-		REQUIRE(text_type_to_string(l2.split_text()) == result2);
-		REQUIRE(text_type_to_string(l3.split_text()) == result3);
-		REQUIRE(text_type_to_string(l4.split_text()) == result4);
-		REQUIRE(text_type_to_string(l5.split_text()) == result5);
-		REQUIRE(text_type_to_string(l6.split_text()) == result6);
-		REQUIRE(text_type_to_string(l7.split_text()) == result7);
-
-
-		REQUIRE(string_to_text_type("yo") == "yo");
-	}
-}
-
-/*
 SCENARIO ("Lines can be constructed in several ways."){
 	SECTION("Let's test default Line construction."){
 		Line l_default;
@@ -150,9 +106,6 @@ SCENARIO ("Line objects store lines of text as they might appear in a text windo
 		}
 	}
 
-*/
-
-SCENARIO("testing new accept_flowback?"){
 	SECTION ("Testing accept_flowback"){
 		Line acceptor = Line("");
 		Line flowback;
@@ -219,4 +172,3 @@ SCENARIO("testing new accept_flowback?"){
 		}
 	}
 }
-

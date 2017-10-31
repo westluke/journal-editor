@@ -4,6 +4,7 @@
 #include <cctype>
 #include <iostream>
 #include <vector>
+#include <type_traits>
 
 // Simple enum that defines the styling applied to a particular character.
 enum class TextStyle: unsigned {
@@ -71,6 +72,8 @@ typedef std::vector<fchar> text_type;
 // Guaranteed to be big enough to hold the size of our formatted "string" vectors. Used to hold index of fchar within text.
 typedef std::vector<fchar>::size_type text_index;
 
+static_assert(std::is_unsigned<text_index>::value, "Signed index type detected");
+
 // Conversions between the text_type and std::string / c-style strings
 text_type string_to_text_type(const std::string &str);
 text_type string_to_text_type(const char *str);
@@ -79,5 +82,10 @@ std::string text_type_to_string(const text_type &t);
 // Doesn't display their rich text forms.
 std::ostream& operator<<(std::ostream& os, const fchar fch);
 std::ostream& operator<<(std::ostream& os, const text_type t);
+std::ostream& operator<<(std::ostream& os, const std::vector<const text_type> ts);
+
+// Comparison operators between strings and text_type make debugging easier.
+bool operator==(const text_type &txt, const std::string &str);
+bool operator==(const std::string &str, const text_type &txt);
 
 #endif
