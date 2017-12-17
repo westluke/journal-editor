@@ -23,26 +23,14 @@
 class Line {
 	public:
 		/****************
-		 * SIMPLE CONST METHODS
+		 * READ METHODS
 		 ****************/
 
 		// The number of characters in the line, including whitespace.
 		text_index size() const;
 
 		// The number of characters in the line, excluding whitespace.
-		text_index visual_size() const;
-
-		// Whether or not the line exceeds this width,
-		// not counting whitespace at the end.
-		bool exceeds_width_non_whitespace(text_index line_width) const;
-
-		// Tests whether two lines can equalize,
-		// without actually equalizing them.
-		bool can_equalize(Line &ln, text_index line_width) const;
-
-		// Tests whether ln can flow back into this line, without actually
-		// flowing back. Used in can_equalize.
-		bool can_accept_flowback(Line &ln, text_index line_width) const;
+		// text_index visual_size() const;
 
 		fchar get_ch(text_index i) const;
 
@@ -53,9 +41,6 @@ class Line {
 		std::string get_string() const;
 		//std::string get_string(text_index start) const;
 		//std::string get_string(text_index start, text_index end) const;
-		
-		// Equality operator
-		bool operator==(const Line &ln) const;
 
 
 
@@ -65,33 +50,51 @@ class Line {
 
 		// fchar-level modification
 		void insert_ch(text_index i, fchar ch);
-		fchar delete_ch(text_index i);
-		fchar replace_ch(text_index i, fchar ch);
+		void delete_ch(text_index i);
+		//void replace_ch(text_index i, fchar ch);
 
 		// text-level modification
 		void append_text(text_type txt);
+		void prepend_text(text_type txt);
 		//void insert_text(text_index i, text_type txt);
-		//void delete_text(text_index start, text_index end);
+		void delete_text(text_index start, text_index end);
 		//text_type replace_text(text_index i, text_type txt);
 
 		// Style modification methods
 		//void change_ch_style(text_index i, TextStyle style);
 		//void change_style(text_index start, TextStyle style);
 		//void change_style(text_index start, text_index end, TextStyle style);
-		
-		// Applies relieve_excess or accept_flowback, whichever is
-		// applicable here.
-		bool equalize(Line &ln, text_index line_width);
+
+
+
+		/***********************
+		 * EQUALIZATION METHODS
+		 ***********************/
+
+		// Whether or not the line exceeds this width,
+		// not counting whitespace at the end.
+		bool exceeds_width_non_whitespace(text_index line_width) const;
+
+		// Tests whether ln can flow back into this line, without actually
+		// flowing back. Used in can_equalize.
+		bool can_accept_flowback(Line &ln, text_index line_width) const;
+
+		// Tests whether two lines can equalize,
+		// without actually equalizing them.
+		bool can_equalize(Line &ln, text_index line_width) const;
+
+		// Redistributes text between the two lines as necessary.
+		void equalize(Line &ln, text_index line_width);
+
+		// Equalizes only if a change will be made. Returns whether a change was made.
+		bool equalize_if_possible(Line &ln, text_index line_width);
 
 		// Moves the minimum amount of words from the end of this line to 
 		// ln in order to get this line under line_width.
-		bool relieve_excess(Line &ln, text_index line_width);
-
-		// Moves the maximum number of words from the beginning of ln to
-		// this line such that this line is under line_width.
-		bool accept_flowback(Line &ln, text_index line_width);
+		void relieve_excess(Line &ln, text_index line_width);
 
 		std::vector<text_type> split_text() const;
+		text_type first_chunk() const;
 
 
 
@@ -111,6 +114,9 @@ class Line {
 		// FOR USE BY PARAGRAPH ONLY!
 		// Marks this line as unchanged.
 		bool _clear_changed_flag();
+		
+		// Equality operator
+		bool operator==(const Line &ln) const;
 
 	private:
 		text_type text;

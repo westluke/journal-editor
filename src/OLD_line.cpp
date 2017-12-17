@@ -100,27 +100,16 @@ bool Line::exceeds_width_non_whitespace(text_index line_width) const{
 
 // This paradigm needs to change, because this is wrong. It doesn't account for all-character lines. Right now my primitive is accept_flowback, but I think it could just as easily be relieve_excess. Which is the better choice, and how do I implement can_equalize with that choice?
 bool Line::can_accept_flowback(Line &ln, text_index line_width) const{
-	// If this line is all characters and below the line_width and ln is non-empty, return true.
-	// Otherwise, make sure that the entire first chunk can fit.
 	assert(line_width > 0);
 
 	if (ln.size() == 0) return false;
-	if (size() == 0) return true;
+	
+	// Really we only need the first chunk.
+	std::vector<text_type> split = ln.split_text();
 
-	text_type chunk = first_chunk();
-	if ((!chunk[0].isspace()) and (chunk.size() == size()) and (size() < line_width)) return true;
-
-	text_type ln_chunk = ln.first_chunk();
-	if ((ln_chunk[0].isspace()) or (ln_chunk.size() + size() <= line_width)) return true;
+	if (	split[0][0].isspace() ||
+		size() + split[0].size() <= line_width) return true;
 	return false;
-}
-
-text_type Line::first_chunk() const{
-	assert(size() != 0);
-	bool space = text[0].isspace();
-	text_index i;
-	for (i = 0; (text[i].isspace() == space) and (i < size()); i++);
-	return get_text(0, i);
 }
 
 bool Line::can_equalize(Line &ln, text_index line_width) const{
@@ -129,46 +118,86 @@ bool Line::can_equalize(Line &ln, text_index line_width) const{
 		can_accept_flowback(ln, line_width));
 }
 
-void Line::equalize(Line &ln, text_index line_width){
+bool Line::equalize(Line &ln, text_index line_width){
 	assert(line_width != 0);
 
-	append_text(ln.get_text());
-	ln.delete_text(0, ln.size());
-	relieve_excess(ln, line_width);
+	if (exceeds_width_non_whitespace(line_width)) return relieve_excess(ln, line_width);
+	else return accept_flowback(ln, line_width);
 }
 
-bool Line::equalize_if_possible(Line &ln, text_index line_width){
-	if (can_equalize(ln, line_width)){
-		equalize(ln, line_width);
-		return true;
-	}
-	return false;
-}
 
-void Line::relieve_excess(Line &ln, text_index line_width){
-	assert(line_width > 0);
-	assert(exceeds_width_non_whitespace(line_width));
+// Currently I have no way to break up a word between lines in relieve excess or accept_flowback. But I think I only need to implement one of these, and can use it to make the other. So which one do I implement, and how do I implement it correctly?
+// I think I could do it with relieve_excess. Pretty simple to check if the only element in the thing is made of characters.
+// But then could I do it with accept_flowback by the same token? I would have to check that everything in the current line is made of characters, and the first thing being taken is also all made of characters, and also it overflows. So let's implement relieve_excess.
+//
+// Then, with relieve_excess, how do I implement accept_flowback? I simply take the entire second line and append it to the first, then relieve excess. Not bad.
+// so let's do that.
+bool Line::accept_flowback(Line &ln, text_index line_width){
+	assert(line_width != 0);
 
-	text_index sum = 0;
-	text_index sz;
 	std::vector<text_type> split = ln.split_text();
 
-	assert(split.size() != 0);
-	assert(split[0].size() != 0);
+	std::vector<text_type>::size_type i;
+	text_index sum = 0;
+	text_index current = size();
 
-	if ((split.size() == 1) and (!split[0][0].isspace())){
-		sum = line_width;
+	for(i = 0; i < split.size(); i++){
+		text_type next = split[i];
+
+		if (next[0].isspace()) sum += next.size();
+		else if (current + sum + next.size() <= line_width) sum += next.size();
+		else break;
+	}
+
+	if (sum == 0) return false;
+
+	append_text(ln.get_text(0, sum));
+	ln.delete_text(0, sum);
+	mark_changed();
+	return true;
+}
+
+bool Line::relieve_excess(Line &ln, text_index line_width){
+	assert(line_width > 0);
+
+	if not(exceeds_width_non_whitespace(line_width)) return false;
+
+	text_index sum = 0;
+	std::vector<text_type> split = ln.split_text();
+	// assert that split is not empty.
+	// Make no assumptions. assert that every element of split is not empty.
+	// That test belongs here, with the assumption.
+	if (split.size() == 1) and (split[0].size() != 0) and (!split[0][0].isspace()){
+		sum = line_width
 	} else {
+
+	//	Because we know that if the thing isn't entirely made of characters, it WILL be split at a word boundary.
+
+		// BETTER IDEA. TRACK THE SUM, THEN PREPEND WHAT YOU DELETE FROM THE END.
 		for (std::vector<text_type>::size_type i = 0; i < split.size(); i++){
 			sz = split[i].size();
-			if ((!split[i][0].isspace()) and (sum + sz > line_width)) break;
+			if (!split[i][0].isspace()){
+				if (sum + sz > line_width) break;
+			}
 			sum += sz;
 		}
 	}
 
-	text_type end = get_text(sum, size());
-	delete_text(sum, size());
-	ln.prepend_text(end);
+	ln.prepend_text(delete_text(sum, size()));
+
+
+
+
+	/*
+	Line temp = Line("");
+	temp.accept_flowback(*this, line_width);
+	ln.prepend_text(get_text());
+	text = temp.text;
+
+	if (ret) mark_changed();
+
+	return ret;
+	*/
 }
 
 std::vector<text_type> Line::split_text() const{
