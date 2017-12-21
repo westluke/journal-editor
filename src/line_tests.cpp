@@ -14,6 +14,14 @@ std::vector<std::string> text_type_to_string(const std::vector<text_type> &txts)
 	return ret;
 }
 
+TEST_CASE("Can construct lines"){
+	Line empty0;
+	Line l0 = Line("Character init");
+	Line l1(std::string("String init"));
+	Line l2 = Line(string_to_text_type("Text init"));
+	Line l3 = "Assignment init";
+}
+
 TEST_CASE("Can read size of a Line"){
 	Line empty = Line();
 	Line onech = Line("a");
@@ -135,6 +143,29 @@ TEST_CASE("Can delete text"){
 	REQUIRE(l0 == Line("hethere"));
 }
 
+TEST_CASE("Can detect when lines are too long"){
+	Line empty = Line("");
+	Line spaces = Line("                                                                                            ");
+	Line characters = Line("aaaaaaaaaaaaaaaaaaaaa");
+	Line reasonable = Line("This is a line with some reasonable text in it.");
+}
+
+TEST_CASE("Can actually relieve excess"){
+	Line empty = Line("");
+	Line spaces = Line("   ");
+	Line characters = Line("aaaaaaaaaaaaaaaaaaaaa");
+	Line reasonable = Line("This is a line with some reasonable text in it.");
+}
+
+// Only the length of the accepting Line matters.
+TEST_CASE("Can detect when a line can accept flowback from another"){
+	Line fivech = Line("aa a ");
+	Line empty = Line("");
+	Line twospace = Line("  ");
+	Line onech = Line("a");
+}
+
+// short
 TEST_CASE("Can detect whether lines can equalize"){
 	Line empty = Line("");
 	Line longline = Line("Long ");
@@ -169,6 +200,7 @@ TEST_CASE("Can detect whether lines can equalize"){
 }
 
 /*
+//short
 TEST_CASE("Can actually equalize lines"){
 	Line empty = Line("");
 	Line longline = Line("Long ");
@@ -190,5 +222,8 @@ TEST_CASE("Can actually equalize lines"){
 }
 
 TEST_CASE("Can split text into vector of words and whitespaces"){
+}
+
+TEST_CASE("Can retrieve the first chunk"){
 }
 */

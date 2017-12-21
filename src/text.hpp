@@ -70,9 +70,9 @@ struct fchar {
 // Used in place of strings to store formatted text.
 typedef std::vector<fchar> text_type;
 // Guaranteed to be big enough to hold the size of our formatted "string" vectors. Used to hold index of fchar within text.
-typedef std::vector<fchar>::size_type text_index;
+typedef std::vector<fchar>::size_type line_index;
 
-static_assert(std::is_unsigned<text_index>::value, "Signed index type detected");
+static_assert(std::is_unsigned<line_index>::value, "Signed index type detected");
 
 // Conversions between the text_type and std::string / c-style strings
 text_type string_to_text_type(const std::string &str);

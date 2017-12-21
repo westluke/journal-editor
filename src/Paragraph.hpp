@@ -3,14 +3,11 @@
 
 #include "line.hpp"
 #include "text.hpp"
+#include "PLOC.hpp"
 #include <initializer_list>
 
 // Used to define font size of paragraph.
 enum class HeaderLevel {none, h1, h2, h3};
-
-struct PLOC;
-
-struct numbered_line;
 
 // I can only think of one solution to properly encapsulate Lines, which is to make them a private class of Paragraph.
 // Because no one else needs the functionality of lines, they only need what the Lines produce: rich text, of the type text_type.
@@ -35,99 +32,86 @@ struct numbered_line;
 // AGH ok fuck it just make it public with a preceding underscore.
 //
 // And we're keeping the PLOC;
-//
+
+struct PLOC {
+	paragraph_index pn;
+	line_index n;
+};
+
+
 class Paragraph{
 	public:
+		// Constructor
+		Paragraph(line_index lw);
+		//Paragraph(std::initializer_list<Line> il, line_index lw);
+		//Paragraph(std::initializer_list<char*>, line_index lw);
+
 		// Returns length of paragraph in number of lines.
 		line_number size() const;
 		bool empty();
 
 		// Distribute
-		bool valid();
-		bool distribute();
+		// bool valid();
+		// bool distribute();
 
 		// Simple text modifications
-		void insert_ch(PLOC i, int ch);
-		void insert_ch(PLOC i, fchar ch); // NOT IMPLEMENTED;
-		fchar replace_ch(PLOC i, int ch); // NOT IMPLEMENTED;
-		fchar replace_ch(PLOC i, fchar ch); // NOT IMPLEMENTED;
-		fchar delete_ch(PLOC i);
+		// void insert_ch(PLOC i, int ch);
+		// void insert_ch(PLOC i, fchar ch); // NOT IMPLEMENTED;
+		// fchar replace_ch(PLOC i, int ch); // NOT IMPLEMENTED;
+		// fchar replace_ch(PLOC i, fchar ch); // NOT IMPLEMENTED;
+		// fchar delete_ch(PLOC i);
 
 		void append_ch(int ch);
 		void delete_last_ch();
+		void insert_ch(PLOC ploc, int ch);
 
 		// NOT IMPLEMENTED
-		void insert_str(PLOC i, std::string str);
-		std::string delete_str(PLOC i, text_index length);
-		std::string replace_str(PLOC i, std::string str);
+		// void insert_str(PLOC i, std::string str);
+		// std::string delete_str(PLOC i, line_index length);
+		// std::string replace_str(PLOC i, std::string str);
 
 		// NOT IMPLEMENTED
-		void insert_text(PLOC i, text_type txt);
-		text_type delete_text(PLOC i, text_index length);
-		text_type replace_text(PLOC i, text_type txt);
+		// void insert_text(PLOC i, text_type txt);
+		// text_type delete_text(PLOC i, line_index length);
+		// text_type replace_text(PLOC i, text_type txt);
 
 		// NOT IMPLEMENTED
-		void set_header_level(HeaderLevel hl);
-		bool apply_format(PLOC start, PLOC end, TextStyle f);
+		// void set_header_level(HeaderLevel hl);
+		// bool apply_format(PLOC start, PLOC end, TextStyle f);
 
-		void set_line_width(text_index lw);
+		// void set_line_width(line_index lw);
 
-		fchar get_ch(PLOC i);
-		std::vector<text_type> get_lines();
+		// fchar get_ch(PLOC i);
+		std::vector<Line> get_lines();
 
-		PLOC last_index() const;
+		// PLOC last_index() const;
 
 		// NOT IMPLEMENTED
-		std::vector<numbered_line> get_changed_lines();	// Returns these lines and clears them.
+		// std::vector<numbered_line> get_changed_lines();	// Returns changed lines
 
-		// Constructor
-		Paragraph(text_index lw);
-		Paragraph(std::initializer_list<Line> il, text_index lw);
-		Paragraph(std::initializer_list<char*>, text_index lw);
+		// bool was_changed();
 
-		bool was_changed();
-		void _clear_changed_flag();
+		// For use by Updater only.
+		// void _clear_changed_flags();
 
 	private:
-		text_index line_width;
+		line_index line_width;
 		std::vector<Line> lines;
 
-		HeaderLevel h_level;
-		TextStyle initial_style;
+		//HeaderLevel h_level;
+		//TextStyle initial_style;
 
-		PLOC previous_index(PLOC i);
-		PLOC next_index(PLOC i);
+		//PLOC previous_index(PLOC i);
+		//PLOC next_index(PLOC i);
 
-		bool changed;
-		void mark_changed();
+		//bool changed;
+		//void mark_changed();
 
 		// Records where on the page this paragraph begins.
 		int line_no;
 };
 
-// Defines a location within a pargraph; a line, and a character within that line.
-// But it isn't an index, that's the wrong word.
-// I think this could be a good name. Making it lowercase makes it sound too simple.
-// But camelcase implies a class.
-struct PLOC {
-	line_number n;
-       	text_index ind;
-};
-
-
-// WHERE DO I PUT THIS
-// This should be ok. Because all I specify in the above definition is THAT the numbered_line is used.
-// I don't specify what it contains. In fact, it could contain anything, and that would be ok.
-// What should I call this? It's a line plus a location. So really, its a line in context, yeah?
-// Well no its not a line, its just text plus a line number.
-//
-// But here it's more than just text, because it is specifically an entire line of text.
-//
-// What do you call text with a position? textloc is wrong.
-
-struct line_at {
-	text_type txt;
-	line_number n;
-};
+typedef std::vector<Paragraph>::size_type document_index;
+static_assert(std::is_unsigned<document_index>::value, "Signed index type detected");
 
 #endif

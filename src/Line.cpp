@@ -9,16 +9,28 @@
 
 
 
+/***************
+ * CONSTRUCTORS
+ ***************/
+
+Line::Line(const text_type &t): text(t), changed(true) {}
+Line::Line(const std::string &str): text(string_to_text_type(str)), changed(true) {}
+Line::Line(const char *str): text(string_to_text_type(std::string(str))), changed(true) {}
+Line::Line(): text(), changed(true) {}
+
+
+
+
 /****************
  * READ METHODS
  ****************/
 
 // The number of characters in the line, INCLUDING trailing whitespace.
-text_index Line::size() const{
+line_index Line::size() const{
 	return text.size();
 }
 
-fchar Line::get_ch(text_index i) const{
+fchar Line::get_ch(line_index i) const{
 	assert(i < size());
 	return text[i];
 }
@@ -27,7 +39,7 @@ text_type Line::get_text() const {
 	return text;
 }
 
-text_type Line::get_text(text_index start, text_index end) const{
+text_type Line::get_text(line_index start, line_index end) const{
 	assert((start >= 0) && (start <= end) && (end <= size()));
 	return text_type(text.begin() + start, text.begin() + end);
 }
@@ -43,19 +55,29 @@ std::string Line::get_string() const {
  * WRITE METHODS
  ***********************/
 
-void Line::insert_ch(text_index i, fchar fch){
+void Line::insert_ch(line_index i, fchar fch){
 	assert(i <= size());
 	text.insert(text.begin() + i, fch);
 	mark_changed();
 }
 
-void Line::delete_ch(text_index i){
+void Line::delete_ch(line_index i){
 	assert(i < size());
 	text.erase(text.begin() + i);
 	mark_changed();
 }
 
-//void Line::replace_ch(text_index i, fchar ch){
+void Line::delete_last_ch(){
+	text.pop_back();
+	mark_changed();
+}
+
+void Line::append_ch(fchar ch){
+	text.push_back(ch);
+	mark_changed();
+}
+
+//void Line::replace_ch(line_index i, fchar ch){
 //	assert(i < size());
 //	delete_ch(i);
 //	insert_ch(i, ch);
@@ -72,7 +94,7 @@ void Line::prepend_text(text_type txt){
 	mark_changed();
 }
 
-void Line::delete_text(text_index start, text_index end){
+void Line::delete_text(line_index start, line_index end){
 	text.erase(text.begin() + start, text.begin() + end);
 	mark_changed();
 }
@@ -84,13 +106,13 @@ void Line::delete_text(text_index start, text_index end){
  * EQUALIZATION METHODS
  ***********************/
 
-bool Line::exceeds_width_non_whitespace(text_index line_width) const{
+bool Line::exceeds_width_non_whitespace(line_index line_width) const{
 	assert(line_width > 0);
 
 	if (size() == 0 || size() <= line_width) return false;
 
 	// If any character beyond line_width isn't whitespace, this line is too big.
-	for (text_index i = line_width; i < size(); i++){
+	for (line_index i = line_width; i < size(); i++){
 		if (!text[i].isspace()){
 			return true;
 		}
@@ -98,8 +120,7 @@ bool Line::exceeds_width_non_whitespace(text_index line_width) const{
 	return false;
 }
 
-// This paradigm needs to change, because this is wrong. It doesn't account for all-character lines. Right now my primitive is accept_flowback, but I think it could just as easily be relieve_excess. Which is the better choice, and how do I implement can_equalize with that choice?
-bool Line::can_accept_flowback(Line &ln, text_index line_width) const{
+bool Line::can_accept_flowback(Line &ln, line_index line_width) const{
 	// If this line is all characters and below the line_width and ln is non-empty, return true.
 	// Otherwise, make sure that the entire first chunk can fit.
 	assert(line_width > 0);
@@ -115,21 +136,13 @@ bool Line::can_accept_flowback(Line &ln, text_index line_width) const{
 	return false;
 }
 
-text_type Line::first_chunk() const{
-	assert(size() != 0);
-	bool space = text[0].isspace();
-	text_index i;
-	for (i = 0; (text[i].isspace() == space) and (i < size()); i++);
-	return get_text(0, i);
-}
-
-bool Line::can_equalize(Line &ln, text_index line_width) const{
+bool Line::can_equalize(Line &ln, line_index line_width) const{
 	assert(line_width > 0);
 	return (exceeds_width_non_whitespace(line_width) || 
 		can_accept_flowback(ln, line_width));
 }
 
-void Line::equalize(Line &ln, text_index line_width){
+void Line::equalize(Line &ln, line_index line_width){
 	assert(line_width != 0);
 
 	append_text(ln.get_text());
@@ -137,7 +150,7 @@ void Line::equalize(Line &ln, text_index line_width){
 	relieve_excess(ln, line_width);
 }
 
-bool Line::equalize_if_possible(Line &ln, text_index line_width){
+bool Line::equalize_if_possible(Line &ln, line_index line_width){
 	if (can_equalize(ln, line_width)){
 		equalize(ln, line_width);
 		return true;
@@ -145,12 +158,11 @@ bool Line::equalize_if_possible(Line &ln, text_index line_width){
 	return false;
 }
 
-void Line::relieve_excess(Line &ln, text_index line_width){
+void Line::relieve_excess(Line &ln, line_index line_width){
 	assert(line_width > 0);
-	assert(exceeds_width_non_whitespace(line_width));
 
-	text_index sum = 0;
-	text_index sz;
+	line_index sum = 0;
+	line_index sz;
 	std::vector<text_type> split = ln.split_text();
 
 	assert(split.size() != 0);
@@ -174,9 +186,9 @@ void Line::relieve_excess(Line &ln, text_index line_width){
 std::vector<text_type> Line::split_text() const{
 	std::vector<text_type> ret;
 
-	text_index i = 0;
-	text_index prev = 0;
-	text_index end = size();
+	line_index i = 0;
+	line_index prev = 0;
+	line_index end = size();
 
 	if (end == 0) return ret;
 
@@ -196,16 +208,20 @@ std::vector<text_type> Line::split_text() const{
 	return ret;
 }
 
+text_type Line::first_chunk() const{
+	assert(size() != 0);
+	bool space = text[0].isspace();
+	line_index i;
+	for (i = 0; (text[i].isspace() == space) and (i < size()); i++);
+	return get_text(0, i);
+}
+
+
 
 
 /********
  * OTHER
  ********/
-
-Line::Line(const text_type &t): text(t), changed(true) {}
-Line::Line(const std::string &str): text(string_to_text_type(str)), changed(true) {}
-Line::Line(const char *str): text(string_to_text_type(std::string(str))), changed(true) {}
-Line::Line(): text(), changed(true) {}
 
 bool Line::was_changed() const{
 	return changed;

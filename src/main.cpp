@@ -1,6 +1,8 @@
 #include "paragraph.hpp"
+#include "document.hpp"
+#include "PLOC.hpp"
+#include <fstream>
 #include <vector>
-#include "cursor.hpp"
 
 // This is gonna take ncurses.h from /usr/include, which will be a symlink to curses.h in the same folder.
 #include <ncurses.h>
@@ -8,86 +10,56 @@
 // #define NDEBUG
 #include <cassert>
 
-cursor get_cursor(WINDOW* win){
-	int y, x;
-	getyx(win, y, x);
-	return {y, x};
-}
-
-void wmove(WINDOW* win, cursor c){
-	wmove(win, c.y, c.x);
-}
+std::fstream debug;
 
 
-void print_line(WINDOW* win, cursor c, text_type &line){
-	wmove(win, c);
-
-	for (auto fch: line){
-		waddch(win, fch.character);
-	}
-}
-
-// BETTER WAY TO DO THIS?
-void print_lines(WINDOW* win, cursor c, std::vector<text_type> &lines){
-	for (auto ln: lines){
-		print_line(win, c, ln);
-		c.y++;
-	}
-	if (lines.size() > 0){
-		int last_length = lines[lines.size() - 1].size();
-		wmove(win, {c.y + lines.size() - 1, c.x + last_length})
-	} else {
-		wmove(win, c);
-	}
-}
-
-void print_para(WINDOW* win, cursor c, Paragraph &p){
-	print_lines(win, c, p.get_lines());
-}
-
-void print_paras(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
-	for (auto p: paras){
-		print_para(win, c, p);
-		c.y += p.size();
-	}
-}
-
-// THESE ARE ALL THE OPERATIONS THAT WE HAVE IN INSERT MODE. IMPLEMENT THEM ALL.
-cursor delete_ch(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
-}
-
-cursor insert_ch(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
-}
-
-cursor insert_tab(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
-}
-
-cursor move_right(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
-}
-
-cursor move_left(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
-}
-
-cursor move_up(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
-}
-
-cursor move_down(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
-}
-
-cursor new_paragraph(WINDOW* win, cursor c, std::vector<Paragraph> &paras){
-}
-
-// Start lets this function handle border offsets.
-void update_paragraph_display(WINDOW* win, cursor start, std::vector<Paragraph> &paras){
-	for (auto p: paras){
-		if (p.was_changed()){
-			std::vector<text_type> &lines
-
+// TEMP
+void print_paragraphs(WINDOW* win, std::vector<Paragraph> paras){
+	for (auto para: paras){
+		for (auto ln: para.get_lines()){
+			const std::string txt = ln.get_string();
+			int y, x;
+			getyx(win, y, x);
+			addstr(txt.c_str());
+			move(y + 1, x);
 		}
 	}
-	// Check every paragraph for changes, then update at te right places.
-	// That means paragraphs must know when they are changed, like lines.
 
+	Paragraph last_para = paras[paras.size() - 1];
+	std::vector<Line> last_lines = last_para.get_lines();
+	int ind = last_lines[last_lines.size() - 1].size();
+	int y, x;
+	getyx(win, y, x);
+	move(y - 1, ind);
+}
+
+// TEMP
+// But how does this tell me shit when the cursor is beyond the last paragraph? Can it ever? No, I don't think so.
+// Do I need this at all? Not yet. Don't do it yet. Implement it just with cursor for now, this is silly.
+*/
+
+void move_right(WINDOW* win){
+	int y, x;
+	getyx(win, y, x);
+	move(y, x + 1);
+}
+
+void move_left(WINDOW* win){
+	int y, x;
+	getyx(win, y, x);
+	move(y, x - 1);
+}
+
+void move_up(WINDOW* win){
+	int y, x;
+	getyx(win, y, x);
+	move(y - 1, x);
+}
+
+void move_down(WINDOW* win){
+	int y, x;
+	getyx(win, y, x);
+	move(y + 1, x);
 }
 
 
@@ -102,25 +74,6 @@ const int LEFT = 260;
 const int UP = 259;
 const int DOWN = 258;
 
-// What should be my sanity check program?  oh shit I need a cursor position for any interaction. well, not really.
-//
-//
-// What is the flow? A user presses a key. Based on the key, the cursor, and the paragraphs, we update the paragraphs.
-// Based on the previous cursor and the change made to the paragraphs, we update the cursor. How do we know what change was made?
-// It's not dependent solely on which operation was done, because it also depends on how the paragraph reacts.
-//
-// LEt's redefine an operation real quick. Operations can ONLY change text in contiguous chunks. Otherwise it's a set of multiple operations.
-// With that said, what can we say about cursor positions before and after an operation? The number of characters before the cursor after the operation
-// is equal to the number before, minus the number of characters deleted before the cursor during the operation, plus those added.
-//
-// The calls in the switch shouldn't know how operations are being implemented. So those operations should be changing the cursor.
-// They should return cursors. And we can make the actual calculations function-dependent for efficiency.
-//
-// THEN, we update the display. Based on what? Based SOLELY on the paragraphs.
-//
-// How should we update display? I could check EVERY paragraph for changes, and then update the right lines inside those paragraphs.
-// That does seem like the best move actually. Checking every paragraph for changes is actually a tiny overhead.
-// Yeah, let's do that.
 
 
 int main() {
@@ -130,243 +83,178 @@ int main() {
 	nonl();		// Prevent enter key from being automatically turned into newline character.
 	intrflush(stdscr, false);	// Prevent interrupt keys from shitting on ncurses' attempts to cleanly exit.
 	
-	// If this is set to true, then certain commands, like right-arrow, get reduced to a single character of extended size.
-	// If it is set to false, then those commands are broken into a series, like 27-91-67
-	// esc - [ - C
-	// 27 is the escape key, and that is an escape sequence.
-	// There is a trick here: If it is set to true, then pressing escape once starts a delay while the program looks for other characters to bind into one.
-	//
-	// BUT, I can use notimeout to negate this useless effect, especially useless considering that ncurses doesn't even accept user-typed escape sequences.
-	// Except that the maintainers of ncurses are lazy fuckers and notimeout doesn't actually work.
-	// So, do I use escape and wait or just go? Well I like the vim-style way of pressing escape, right? But I could just as easily use ` or jkl as escapes.
-	// Let's keep it on true for now. That way, I don't have to interpret escape sequences at all!
 	keypad(stdscr, true);
-	//notimeout(stdscr, true);
-	//
 
+	debug = std::fstream("/dev/ttys001");
+	debug << std::endl << std::endl;
 
-	// By capturing all mouse events, we prevent scrollback in the terminal.
-	// However, because keypad mode is not enabled, these mouse events come as escape sequences to getchar().
-	// That could confuse things, because the sequences include normal alphabetical characters.
-	// We deal with this later, by taking special action whenever the ESC character (27) is received.
-	//mousemask(ALL_MOUSE_EVENTS, nullptr);
+	std::vector<Paragraph> paras;
+	paras.push_back(Paragraph(20));
 
-	std::vector<Paragraph>paras = std::vector<Paragraph>();
-	int lw = 20;
-	paras.push_back(Paragraph(lw));
+	Document doc = Updater(Paragraph(10));
 
 	int input;
-	
-
-	// HOW ARE PARAGRAPHS COPIED?
-	// Well one vector is assigned to another. How? all the elements of the vector are assigned.
-	// So all the Lines are assigned. which means all the text_types are assigned. Which means all the fchars are assigned.
-	// So these are actually nice data structures, they behave nicely. Which means I have to reference them instead of just copying.
 
 	while(true){
-		Paragraph &last = paras[paras.size() - 1];
 		input = getch();
-		cursor c = get_cursor(stdwin);
+		int y, x;
+		getyx(stdwin, y, x);
+		ploc = doc.get_PLOC();
 
 		switch(input){
-			case ESC:	break;
-			case TAB:	break;
-
-			case ENTER:	paras.push_back(Paragraph(lw));
+			case ESC:	goto kill;
 					break;
 
-			case DEL:	last.delete_last_ch();
+			case ENTER:	doc.append_para();
 					werase(stdwin);
-					print_paras(stdwin, c, paras);
+					print_paragraphs(stdwin, doc.paras);
 					refresh();
 					break;
 
-			case UP:	wmove(stdwin, c.y-1, c.x);
-					break;
-
-			case DOWN:	wmove(stdwin, c.y+1, c.x);
-					break;
-
-			case RIGHT:	wmove(stdwin, c.y, c.x+1);
-					break;
-
-			case LEFT:	wmove(stdwin, c.y, c.x-1);
-					break;
-
-			default:	last.append_ch(input);
+			case DEL:	doc.delete_last_ch();
 					werase(stdwin);
-					print_paras(stdwin, c, paras);
+					print_paragraphs(stdwin, doc.paras);
+					refresh();
+					break;
+
+			case UP:	move_up(stdwin);
+					break;
+
+			case DOWN:	move_down(stdwin);
+					break;
+
+			case RIGHT:	move_right(stdwin);
+					break;
+
+			case LEFT:	move_left(stdwin);
+					break;
+
+					// Based off the position of the cursor, we have to know which paragraph to edit, and which line in that paragraph, and which character in that line. Interestingly, PLOC doesn't help much right now with the line bit cuz it's the same as y.
+					// A better format for PLOC is which paragraph, which line in that paragraph, which character in that line. That's really what I'm going for. Right? Great, let's do that.
+			default:	docloc = doc.get_DOCLOC(y, x);
+					doc.insert_ch(docloc, input);
+					//AGH how do I know where the next cursor position is?
+					//int y1, x1;
+					//doc.get_cursor(y1, x1);
+					//move(y1, x1)
+
+
+					werase(stdwin);
+					print_paragraphs(stdwin, upd.paras);
 					refresh();
 					break;
 		}
 	}
-}
 
-	/*Paragraph last = paras[paras.size() - 1];
-
-	last.append_ch(97);
-	print_lines(stdwin, 0, last.get_lines());
-	refresh();
-	last.append_ch(97);
-	print_lines(stdwin, 0, last.get_lines());
-	refresh();
-	last.append_ch(97);
-	print_lines(stdwin, 0, last.get_lines());
-	refresh();
-
-	print_lines(stdwin, 0, last.get_lines());
-	refresh();
-	input = getch();
+kill:
 	endwin();
-	return 0;
-	*/
-
-
-
-	/*
-	while (true){
-		input = getch();
-
-		switch(input){
-			case ESC_CODE:	endwin();
-					return 0;
-			case KEY_ENTER: paras.push_back(Paragraph(lw));
-					cursor c = get_cursor(stdwin);
-					wmove(stdwin, c.y+1, 0);
-					break;
-			default:	Paragraph last = paras[paras.size() - 1];
-					last.append_ch(input);
-					print_lines(stdwin, 0, last.get_lines());
-					refresh();
-					break;
-		}
-
-		
-		//if (input == KEY_RESIZE){
-		//}
-
-		if (input == ESC_CODE){
-			endwin();
-			return 0;
-		}
-	}
-	*/
-
-
-
-
-
-/*
-void Control::loop() {
-	int input;
-
-	while (true){
-		pos.update();
-		
-		input = getch();
-
-		if (input == KEY_RESIZE){
-		//	resize();
-		}
-
-		else if (mode == EditorMode::insert){
-			handle_insert_mode_input(input);
-
-		}
-
-		else if (mode == EditorMode::normal){
-			handle_normal_mode_input(input);
-		}
-	}
+	debug.close();
 }
 
-// No matter what, keyboard shortcuts using option and command will cut through the program and affect the terminal, 
-// it happens in vim too, and there's nothing I can do about it.
-void Control::handle_insert_mode_input(int input) {
-	if (input == ESC){
-		nodelay(stdscr, true);
+// Functions to add lines: addchstr and addnstr
+// What is chtype? How to use? All we know is it is something like an integer, so we can assign integer constants.
 
-		// If the escape character came alone, then it was user input and we should go to normal mode.
-		if (getch() == ERR){
-			mode = EditorMode::normal;
-		}
+// Next step: let me delete a line, and then let me move the cursor.
+// Moving the cursor will be much more tricky. Deleting a line is easy. Just a modification to delete_last_ch.
+// Once I have the cursor movements in place, can phase out the delete_last_ch stuff.
+// Then: only update new changes.
+//
+//
+// Jk, first step is misleading. Now let's try letting me delete a character at a specific location.
+// What do we need in order to do this? We av=
+// What do we store? do we store the paragraph location, or the actual cursor location? Doesn't seem to make much sense to store cursor location, since that's really easy to get. In fact, it's a macro. Makes much moresense to store the paragraph location, and mayb occasionally make sure that the two are in sync As changes occur.
+//
+// How would that work? When we insert, depending on the results we shift the cursor and the paragraph location in the right ways
+// But that's parallelism, and parallelism is dangerous.
+//
+// Is there a safer way to do this? Something that can be recalculated from scratch every time to always work? Or something whose recursive calculation is extremely simple and hard to fuck up?
+//
+//
+// When I go to insert something, I HAVE to be calculating FROM the cursor position. That tells me where the user actualy things something will be inserted.
+// Maybe I can optimize this later, but for now it's ok to recalculate ever time
+// Moving the cursor itself is a different matter. How do I do that? Where do I work from? I would say that I work from the previous cursor position, always.
+// Should I extract the cursor data? then pass it to updater? Otherwise, updater has to know about ncurses, right. Don't worry about that now.
+// So either we make a function to get the parargaph location, or the thing using it does it iself.
+// Make the function.
+// What's the struct?
 
-		// Otherwise, it came from some nefarious source and we must clear the input buffer.
-		else {
-			int possible_resize;
-			while ((possible_resize = getch()) != ERR) {
-				if (possible_resize == KEY_RESIZE) {
-					resize();
-				}
-			}
-		}
-		nodelay(stdscr, false);
-	}
-	
-	// If it wasn't the escape character, then we should print it.
-	// We don't actually need a fancy display class. The text manager can probably do it all.
-	// Just insert a character where we tell you.
-	else{
-		manager.insert_ch(pos);
-	}
-}
 
-// What objects does this function need to have access to?
-// If the user pushed an arrow key, it just needs to move the cursor.
-// That means access to Metadata object.
-// It needs to call all display functions.
-// And it doesn't know where in a paragraph to add text. It might request that information, but that's too much responsibility.
-// I think it makes more sense for it to make calls to a text manager which knows, based on cursor position, where to put text.
-// And of course it must make calls to display managers of some sort.
-// Should I write unit tests?
-void Control::handle_normal_mode_input (int input){
-	if (input == '='){
-		endwin();
-		return;
-	}
 
-	if (input == 'i'){
-		mode = EditorMode::insert;
-	}
-}
-*/
-	//
-	//
-	//NCURSES keys start at 400. But normal keys are much earlier. So, for instance, a = 97.
-	//
-	//Goal: support use of normal keys and enter.
-	//So we can make new paragraphs and add to existing paragraphs.
-	//
-	//How do I calculate where a cursor should be?
-	//I could pass the cursor to the paragraph as well as the other data.
-	//I could also calculate a para_cursor by the number of characters offset since the start of the paragraph.
-	//OR, each paragraph operation could return an informative struct that tells you how many lines were added or something.
-	//
-	//I think it might be time for me to get an idea of what sorts of operations I intend to support.
-	//How many modes should I have? normal and insert at least. Colon commands are included in normal mode.
-	//And then visual mode I guess
-	//
-	//insert mode: character insertion, arrow key movement, and escape to normal mode.
-	//normal mode: 	commands to begin inserting (all easy)
-	//		selection commands
-	//		deletion (depends on how many things are deleted, where.)
-	//		copying (easy)
-	//		pasting (depends on how many things are pasted, where.)
-	//		search (relatively easy.)
-	//		movement (markers, gg, etc. all easy.)
-	//
-	//		The only things that make cursor movement tricky are those things that change the text.
-	//		That necessarily means insertion or deletion.
-	//		Insertion or deletion WITHIN a pargraph, of contiguous text, is not too bad. Use paracursor. Repeated
-	//		acts can just be done consecutively, no problem.
-	//
-	//		But what about insertion or deletion ACROSS paragraphs? Actually, in any of these cases I would presume that we have a p_index,
-	//		which makes things much easier. I just don't have it when we append.
-	//
-	//		Wait no im being silly. because cursors will always be dependent on the result of get_changed_lines.
-	//
-	//		I should have a print lines function.
-	//
-	//		Yes, we can associate certain formats with chtype characters, and yes, lines iwll wrap themselves.
-	//		But pooorly, and inconsistently. I have to do it myself.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Interesting problems: when i move left, right, up or down, the resulting cursor movement depends on the paragraphs. Same with when I insert or anything.
+// How do I do this right? Could decompose every command into sequences of movements, insertion of characters, deletions of characters, insertions of paragraphs, and deletions of paragraphs.
+// Dealing with movements is relatively simple.
+// How do I deal with insertions? with characters, we just move relative to our previous position in the paragraph, right? That's complicated logic, but it's a good way to think about it.
+// And with insertions or deletions of paragraphs? Just move to the end or beginning of some paragraph.
+//
+// Ok, so with character insertion, how do I actually do that? I have the cursor at a particular spot. I delete the character and rebalance. Does what I do depend on the rebalance? I don't think so. The rebalance could end up being quite complicated, I think. I don't really want to have to analyze that. Here's what I do know. However this plays out, as long as that paragraph still exists, my position from the beginning of the paragraph goes down by 1.
+// I could also phrase it in terms of PLOC; I go to the previous PLOC.
+//
+// So, here's what happens. I find the cursor position (constant time). Then I find the PLOC to do deletions (very low time.) Then, I go to the previous PLOC (very low time). From the previous PLOC, and the line_no of the paragraph, I find the new cursor position.
+// And for insertions, we go to the next PLOC.
+//
+// Gets more tricky when the thing we are deleting is a newline.
+//
+// Also, how do I deal with insertion or deletion of blocks of text? that's tricky, isn't it. Could span paragraphs.
+// With deletion, I just go before the first character involved.
+// With insertion, I go after the last. Not so bad actually.
+//
+// But I note some things here. firstly, if updater controls all access to paragraphs, updater is gonna be really, really messy.
+//
+// So what do I do instead? Paragraphs is clearly something that has to be passed to like everything.
+// But if I pass the vector, everything gets copied in all the time, which is really really shitty. Cuz this size could be really, really big.
+//
+// But think about it; I don't WANT to be passing in copies. I want to be passing in references to this paras, which is totally A-ok. So that's great.
+//
+// Another thing to think about: how do other copying operations work? a little tricky. I change vectors and lines and paragraphs, but all passing operations actually copy them.// Is that right? I think so, if I want them references I'll explicitly call them references, instead of copying them.
+// Well, no. What I might be looking for is neither copying nor referencing, but shallow-copying. Creating a NEW OBJECT, whose sub-objects are references of each other.
+// Would I ever want that? Almost certainly not.
+//
+// Great. So what's the next function to implement?
+// I think deletions and insertions AT the cursor position. That sounds right. Build from there.
+// That will require implementing a cursor-to-PLOC function.
+//
+// But let's not get ahead.
+
+
+
+
+
+
+
+// How do I wrap up these methods? Namespace or class?
+// Could make a Document class that holds Paragraphs. Could actually make sense.
+// And the Document could have a get_PLOC function.
+// And the get_cursor function? could also be there. Makes more sense than Updater.
+// Yeah, let's do that.
+// But what about when we need to print shit? Document definitely shouldn't do that.
+// How does it get done? Well, we decided we only reprint the lines that need to be reprinted.
+// So we could retreive that somehow from Document?
+//
+// FUCK WAIT. This coud be a problem down the line, but I want to address it here. How do we actually do the changes shit?
+// I know lines know when they have been changed, and paragraphs know when at least one line is changed.
+// But say a paragraph increases in size. How do I know about that? I would want to be inserting lines,
+// but in order to insert lines I need to know by how much the paragraph change size.
+// The alternative is reprinting everything after it. Except I'm not actually reprinting everything after it, am I, cuz the screen size is limited. So forget about printing speed, it's always constrained. That would actually be fine.
+// 
+// So a document could just output every changed paragraph, and we can reprint all the changed paragraphs.
+// ACTUALLY, IM AN IDIOT. We don't even need all this changed shit necessarily, cuz PRINTING IS NOT A PROBLEM!
+// WE CAN TOTALLY REPRINT AS MUCH AS WE LIKE! This just goes to show don't overdesign.
+//
+// OK, but; Document, or paras variable? That's the big question right now.
+// If I use document, it's basically a giant singleton. which I actually don't want to use.
+// Could I ever have more than one? only if I introduce tabs, I think. Which could actually happen.
+// Alright fine, use Document.

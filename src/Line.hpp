@@ -22,25 +22,36 @@
 
 class Line {
 	public:
+		/***************
+		 * CONSTRUCTORS
+		 ***************/
+
+		Line(const text_type &t);
+		Line(const std::string &str);
+		Line(const char *str);
+		Line();
+
+		
+
 		/****************
 		 * READ METHODS
 		 ****************/
 
 		// The number of characters in the line, including whitespace.
-		text_index size() const;
+		line_index size() const;
 
 		// The number of characters in the line, excluding whitespace.
-		// text_index visual_size() const;
+		// line_index visual_size() const;
 
-		fchar get_ch(text_index i) const;
+		fchar get_ch(line_index i) const;
 
 		text_type get_text() const;
-		//text_type get_text(text_index start) const;
-		text_type get_text(text_index start, text_index end) const;
+		//text_type get_text(line_index start) const;
+		text_type get_text(line_index start, line_index end) const;
 
 		std::string get_string() const;
-		//std::string get_string(text_index start) const;
-		//std::string get_string(text_index start, text_index end) const;
+		//std::string get_string(line_index start) const;
+		//std::string get_string(line_index start, line_index end) const;
 
 
 
@@ -48,22 +59,27 @@ class Line {
 		 * WRITE METHODS
 		 ***********************/
 
+		// These are the only places where mark_changed() is called.
+		// All non-const operations must be done through these methods.
+
 		// fchar-level modification
-		void insert_ch(text_index i, fchar ch);
-		void delete_ch(text_index i);
-		//void replace_ch(text_index i, fchar ch);
+		void insert_ch(line_index i, fchar ch);
+		void delete_ch(line_index i);
+		void append_ch(fchar ch);
+		void delete_last_ch();
+		//void replace_ch(line_index i, fchar ch);
 
 		// text-level modification
 		void append_text(text_type txt);
 		void prepend_text(text_type txt);
-		//void insert_text(text_index i, text_type txt);
-		void delete_text(text_index start, text_index end);
-		//text_type replace_text(text_index i, text_type txt);
+		//void insert_text(line_index i, text_type txt);
+		void delete_text(line_index start, line_index end);
+		//text_type replace_text(line_index i, text_type txt);
 
 		// Style modification methods
-		//void change_ch_style(text_index i, TextStyle style);
-		//void change_style(text_index start, TextStyle style);
-		//void change_style(text_index start, text_index end, TextStyle style);
+		//void change_ch_style(line_index i, TextStyle style);
+		//void change_style(line_index start, TextStyle style);
+		//void change_style(line_index start, line_index end, TextStyle style);
 
 
 
@@ -73,25 +89,25 @@ class Line {
 
 		// Whether or not the line exceeds this width,
 		// not counting whitespace at the end.
-		bool exceeds_width_non_whitespace(text_index line_width) const;
+		bool exceeds_width_non_whitespace(line_index line_width) const;
 
 		// Tests whether ln can flow back into this line, without actually
 		// flowing back. Used in can_equalize.
-		bool can_accept_flowback(Line &ln, text_index line_width) const;
+		bool can_accept_flowback(Line &ln, line_index line_width) const;
 
 		// Tests whether two lines can equalize,
 		// without actually equalizing them.
-		bool can_equalize(Line &ln, text_index line_width) const;
+		bool can_equalize(Line &ln, line_index line_width) const;
 
 		// Redistributes text between the two lines as necessary.
-		void equalize(Line &ln, text_index line_width);
+		void equalize(Line &ln, line_index line_width);
 
 		// Equalizes only if a change will be made. Returns whether a change was made.
-		bool equalize_if_possible(Line &ln, text_index line_width);
+		bool equalize_if_possible(Line &ln, line_index line_width);
 
 		// Moves the minimum amount of words from the end of this line to 
 		// ln in order to get this line under line_width.
-		void relieve_excess(Line &ln, text_index line_width);
+		void relieve_excess(Line &ln, line_index line_width);
 
 		std::vector<text_type> split_text() const;
 		text_type first_chunk() const;
@@ -102,12 +118,6 @@ class Line {
 		 * OTHER
 		 ********/
 	
-		// Constructors
-		Line(const text_type &t);
-		Line(const std::string &str);
-		Line(const char *str);
-		Line();
-
 		// Returns the private changed variable.
 		bool was_changed() const;
 
@@ -128,6 +138,7 @@ class Line {
 std::ostream& operator<<(std::ostream& os, const Line& ln);
 std::ostream& operator<<(std::ostream& os, const std::vector<Line>& vol);
 
-typedef std::vector<Line>::size_type line_number;
+typedef std::vector<Line>::size_type paragraph_index;
+static_assert(std::is_unsigned<paragraph_index>::value, "Signed index type detected");
 
 #endif
