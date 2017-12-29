@@ -6,14 +6,21 @@ catch = objs/define_catch.o
 # corresponding headers, so we have to detect that.
 # Otherwise, every source has one .cpp file and one.hpp file. If any file breaks this pattern, I add an explicit exception.
 # Although I don't really see how something could. WELL it could have extra header files, in that case I just add another rule to combine the dependencies.
-objs/%.o: src/%.cpp $(wildcard src/%.hpp)
+# Interesting. This isn't working for headers.
+#
+# That's because wildcard accepts a file pattern. % isn't part of that pattern, it's not expanded there.
+# I might have been able to use secondary expansion though.
+
+objs/%.o: src/%.cpp src/%.hpp
+	$(CC) -c src/$*.cpp -o objs/$*.o
+
+objs/%.o: src/%.cpp
 	$(CC) -c src/$*.cpp -o objs/$*.o
 
 line_tests: $(lines) $(catch) objs/line_tests.o
 	$(CC) $^ -o $@
 
-#Do I really want to list every dependency here? Is there a faster way? Could make fake dependency groups for groups of files
-main: $(lines) objs/paragraph.o objs/updater.o objs/main.o
+main: $(lines) objs/paragraph.o objs/document.o objs/main.o
 	$(CC) $^ -o $@
 
 clean:

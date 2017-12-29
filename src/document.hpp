@@ -15,20 +15,24 @@
 // Couldj ust have that pointer to a vector of lines.
 
 struct DOCLOC {
-	document_index dn;
+	DOCLOC(document_size p, paragraph_size l, line_size ch): paragraph(p), ploc({l, ch}){}
+	document_size paragraph;
 	PLOC ploc;
-}
+};
 
 class Document{
 	public:
 		Document(Paragraph b);
-		void append_ch(int ch);
-		void delete_last_ch();
 		void append_para();
 		// Determines what paragraph gets cloned whenever a newline is added.
 		void set_base_paragraph(Paragraph p);
 		void insert_ch(DOCLOC docloc, int input);
+		void insert_fchar(DOCLOC docloc, fchar fch);
+		void replace_fchar(DOCLOC docloc, fchar fch);
 		DOCLOC get_DOCLOC(int y, int x);
+
+		Paragraph get_paragraph(document_size pi);
+		void get_cursor(DOCLOC dloc, y, x);
 		//fchar replace_ch();
 		//fchar delete_ch();
 
@@ -57,9 +61,10 @@ class Document{
 
 		//void update();
 		//Updater(Printer p);
+		std::vector<Paragraph> get_paragraphs() const;
 
-		std::vector<Paragraph> paras;
 	private:
+		std::vector<Paragraph> paragraphs;
 		Paragraph base;
 		//Printer print;
 };

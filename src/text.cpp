@@ -1,5 +1,15 @@
 #include "text.hpp"
 
+const TextStyle TextStyle::none = TextStyle(0x00);
+const TextStyle TextStyle::bold = TextStyle(0x01);
+const TextStyle TextStyle::italic = TextStyle(0x02);
+const TextStyle TextStyle::underline = TextStyle(0x04);
+const TextStyle TextStyle::strikethrough = TextStyle(0x08);
+const TextStyle TextStyle::link = TextStyle(0x10);
+const TextStyle TextStyle::cursor_after = TextStyle(0x20);
+const TextStyle TextStyle::cursor_before = TextStyle(0x40);
+
+
 // Conversions between the text_type and std::string / c-style strings
 text_type string_to_text_type(const std::string &str){
 	text_type t;

@@ -38,20 +38,20 @@ class Line {
 		 ****************/
 
 		// The number of characters in the line, including whitespace.
-		line_index size() const;
+		line_size size() const;
 
 		// The number of characters in the line, excluding whitespace.
-		// line_index visual_size() const;
+		// line_size visual_size() const;
 
-		fchar get_ch(line_index i) const;
+		fchar get_ch(line_size i) const;
 
 		text_type get_text() const;
-		//text_type get_text(line_index start) const;
-		text_type get_text(line_index start, line_index end) const;
+		//text_type get_text(line_size start) const;
+		text_type get_text(line_size start, line_size end) const;
 
 		std::string get_string() const;
-		//std::string get_string(line_index start) const;
-		//std::string get_string(line_index start, line_index end) const;
+		//std::string get_string(line_size start) const;
+		//std::string get_string(line_size start, line_size end) const;
 
 
 
@@ -63,23 +63,23 @@ class Line {
 		// All non-const operations must be done through these methods.
 
 		// fchar-level modification
-		void insert_ch(line_index i, fchar ch);
-		void delete_ch(line_index i);
+		void insert_ch(line_size i, fchar ch);
+		void delete_ch(line_size i);
 		void append_ch(fchar ch);
 		void delete_last_ch();
-		//void replace_ch(line_index i, fchar ch);
+		void replace_ch(line_size i, fchar ch);
 
 		// text-level modification
 		void append_text(text_type txt);
 		void prepend_text(text_type txt);
-		//void insert_text(line_index i, text_type txt);
-		void delete_text(line_index start, line_index end);
-		//text_type replace_text(line_index i, text_type txt);
+		//void insert_text(line_size i, text_type txt);
+		void delete_text(line_size start, line_size end);
+		//text_type replace_text(line_size i, text_type txt);
 
 		// Style modification methods
-		//void change_ch_style(line_index i, TextStyle style);
-		//void change_style(line_index start, TextStyle style);
-		//void change_style(line_index start, line_index end, TextStyle style);
+		//void change_ch_style(line_size i, TextStyle style);
+		//void change_style(line_size start, TextStyle style);
+		//void change_style(line_size start, line_size end, TextStyle style);
 
 
 
@@ -89,25 +89,25 @@ class Line {
 
 		// Whether or not the line exceeds this width,
 		// not counting whitespace at the end.
-		bool exceeds_width_non_whitespace(line_index line_width) const;
+		bool exceeds_width_non_whitespace(line_size line_width) const;
 
 		// Tests whether ln can flow back into this line, without actually
 		// flowing back. Used in can_equalize.
-		bool can_accept_flowback(Line &ln, line_index line_width) const;
+		bool can_accept_flowback(Line &ln, line_size line_width) const;
 
 		// Tests whether two lines can equalize,
 		// without actually equalizing them.
-		bool can_equalize(Line &ln, line_index line_width) const;
+		bool can_equalize(Line &ln, line_size line_width) const;
 
 		// Redistributes text between the two lines as necessary.
-		void equalize(Line &ln, line_index line_width);
+		void equalize(Line &ln, line_size line_width);
 
 		// Equalizes only if a change will be made. Returns whether a change was made.
-		bool equalize_if_possible(Line &ln, line_index line_width);
+		bool equalize_if_possible(Line &ln, line_size line_width);
 
 		// Moves the minimum amount of words from the end of this line to 
 		// ln in order to get this line under line_width.
-		void relieve_excess(Line &ln, line_index line_width);
+		void relieve_excess(Line &ln, line_size line_width);
 
 		std::vector<text_type> split_text() const;
 		text_type first_chunk() const;
@@ -138,7 +138,7 @@ class Line {
 std::ostream& operator<<(std::ostream& os, const Line& ln);
 std::ostream& operator<<(std::ostream& os, const std::vector<Line>& vol);
 
-typedef std::vector<Line>::size_type paragraph_index;
-static_assert(std::is_unsigned<paragraph_index>::value, "Signed index type detected");
+typedef std::vector<Line>::size_type paragraph_size;
+static_assert(std::is_unsigned<paragraph_size>::value, "Signed size type detected");
 
 #endif

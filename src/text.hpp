@@ -6,42 +6,59 @@
 #include <vector>
 #include <type_traits>
 
-// Simple enum that defines the styling applied to a particular character.
-enum class TextStyle: unsigned {
-	none = 0x00,
-	bold = 0x01,
-	italic = 0x02,
-	underline = 0x04,
-	strikethrough = 0x08,
-	link = 0x10
+// OH I understand the problem. The printing function is inline. A lot of this shit is inline.
+// That means when we update this file, text.cpp is recompiled. But main.cpp isn't getting info about TextStyle from text.o!
+// It's getting it from text.hpp. That means main has to be recompiled as well.
+// Everything that depends on text.hpp has to be recompiled everytime text.hpp is recompiled.
+
+class TextStyle {
+	public:
+	static const TextStyle none;
+	static const TextStyle bold;
+	static const TextStyle italic;
+	static const TextStyle underline;
+	static const TextStyle strikethrough;
+	static const TextStyle link;
+	static const TextStyle cursor_after;
+	static const TextStyle cursor_before;
+
+	inline TextStyle operator|(const TextStyle ts) const{
+		return TextStyle(u | ts.u);
+	}
+
+	inline TextStyle operator&(const TextStyle ts) const{
+		return TextStyle(u & ts.u);
+	}
+
+	inline TextStyle operator^(const TextStyle ts) const{
+		return TextStyle(u ^ ts.u);
+	}
+
+	inline TextStyle operator~() const{
+		return TextStyle(~u);
+	}
+
+	inline bool operator==(const TextStyle& ts) const{
+		return (u == ts.u);
+	}
+
+	inline operator bool() const{
+		return !(u == none.u);
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const TextStyle &ts);
+
+	private:
+	unsigned u;
+
+	inline TextStyle(unsigned x){
+		u = x;
+	}
 };
 
-// Bitwise OR
-inline TextStyle operator|(const TextStyle a, const TextStyle b){
-	return static_cast<TextStyle>(static_cast<char>(a) | static_cast<char>(b));
+inline std::ostream& operator<<(std::ostream& os, const TextStyle &ts){
+	return (os << ts.u);
 }
-
-// Bitwise AND
-inline TextStyle operator&(const TextStyle a, const TextStyle b){
-	return static_cast<TextStyle>(static_cast<char>(a) & static_cast<char>(b));
-}
-
-// Bitwise XOR
-inline TextStyle operator^(const TextStyle a, const TextStyle b){
-	return static_cast<TextStyle>(static_cast<char>(a) ^ static_cast<char>(b));
-}
-
-// Bitwise NOT
-inline TextStyle operator~(const TextStyle a){
-	return static_cast<TextStyle>(~static_cast<char>(a));
-}
-
-/*
-inline std::ostream& operator<<(std::ostream& os, const TextStyle& ts){
-	return (os << static_cast<int>(ts));
-}
-*/
-
 
 
 
@@ -70,9 +87,9 @@ struct fchar {
 // Used in place of strings to store formatted text.
 typedef std::vector<fchar> text_type;
 // Guaranteed to be big enough to hold the size of our formatted "string" vectors. Used to hold index of fchar within text.
-typedef std::vector<fchar>::size_type line_index;
+typedef std::vector<fchar>::size_type line_size;
 
-static_assert(std::is_unsigned<line_index>::value, "Signed index type detected");
+static_assert(std::is_unsigned<line_size>::value, "Signed size type detected");
 
 // Conversions between the text_type and std::string / c-style strings
 text_type string_to_text_type(const std::string &str);

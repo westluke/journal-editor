@@ -12,58 +12,6 @@
 
 std::fstream debug;
 
-
-// TEMP
-void print_paragraphs(WINDOW* win, std::vector<Paragraph> paras){
-	for (auto para: paras){
-		for (auto ln: para.get_lines()){
-			const std::string txt = ln.get_string();
-			int y, x;
-			getyx(win, y, x);
-			addstr(txt.c_str());
-			move(y + 1, x);
-		}
-	}
-
-	Paragraph last_para = paras[paras.size() - 1];
-	std::vector<Line> last_lines = last_para.get_lines();
-	int ind = last_lines[last_lines.size() - 1].size();
-	int y, x;
-	getyx(win, y, x);
-	move(y - 1, ind);
-}
-
-// TEMP
-// But how does this tell me shit when the cursor is beyond the last paragraph? Can it ever? No, I don't think so.
-// Do I need this at all? Not yet. Don't do it yet. Implement it just with cursor for now, this is silly.
-*/
-
-void move_right(WINDOW* win){
-	int y, x;
-	getyx(win, y, x);
-	move(y, x + 1);
-}
-
-void move_left(WINDOW* win){
-	int y, x;
-	getyx(win, y, x);
-	move(y, x - 1);
-}
-
-void move_up(WINDOW* win){
-	int y, x;
-	getyx(win, y, x);
-	move(y - 1, x);
-}
-
-void move_down(WINDOW* win){
-	int y, x;
-	getyx(win, y, x);
-	move(y + 1, x);
-}
-
-
-
 const int ESC = 27;
 const int ENTER = 13;
 const int DEL = 127;
@@ -74,9 +22,7 @@ const int LEFT = 260;
 const int UP = 259;
 const int DOWN = 258;
 
-
-
-int main() {
+int main() {	
 	WINDOW* stdwin = initscr();	// Start curses mode
 	cbreak();	// Disable line-by-line buffering
 	noecho();	// Prevent entered characters from immediately appearing on screen
@@ -88,34 +34,34 @@ int main() {
 	debug = std::fstream("/dev/ttys001");
 	debug << std::endl << std::endl;
 
-	std::vector<Paragraph> paras;
-	paras.push_back(Paragraph(20));
-
-	Document doc = Updater(Paragraph(10));
+	Document doc = Document(Paragraph(0, 10));
 
 	int input;
 
 	while(true){
 		input = getch();
+
 		int y, x;
 		getyx(stdwin, y, x);
-		ploc = doc.get_PLOC();
+		DOCLOC dloc = doc.get_DOCLOC(y, x);
+
+		// Let's try to implement line wrapping now, still all in one paragraph.
 
 		switch(input){
 			case ESC:	goto kill;
 					break;
 
-			case ENTER:	doc.append_para();
+			/*case ENTER:	doc.append_para();
 					werase(stdwin);
-					print_paragraphs(stdwin, doc.paras);
+					print_paragraphs(stdwin, doc);
 					refresh();
-					break;
+					break;*/
 
-			case DEL:	doc.delete_last_ch();
+			/*case DEL:	doc.delete_last_ch();
 					werase(stdwin);
-					print_paragraphs(stdwin, doc.paras);
+					print_paragraphs(stdwin, doc);
 					refresh();
-					break;
+					break;*/
 
 			case UP:	move_up(stdwin);
 					break;
@@ -128,19 +74,15 @@ int main() {
 
 			case LEFT:	move_left(stdwin);
 					break;
-
-					// Based off the position of the cursor, we have to know which paragraph to edit, and which line in that paragraph, and which character in that line. Interestingly, PLOC doesn't help much right now with the line bit cuz it's the same as y.
-					// A better format for PLOC is which paragraph, which line in that paragraph, which character in that line. That's really what I'm going for. Right? Great, let's do that.
-			default:	docloc = doc.get_DOCLOC(y, x);
-					doc.insert_ch(docloc, input);
-					//AGH how do I know where the next cursor position is?
-					//int y1, x1;
-					//doc.get_cursor(y1, x1);
-					//move(y1, x1)
-
-
+					
+					// Here's the rub. I have to insert an fchar, not an integer.
+					// OR, I have to insert an integer and THEN modify it.
+					// Easier to just insert an fchar. Let's do that.
+					// I really need to clear up the conventions around fchar and int. Better to make everything overloaded I think.
+					// Let's now beef up insert_fchar so it wraps stuff.
+			default:	doc.insert_fchar(dloc, fchar(input, TextStyle::cursor_after));
 					werase(stdwin);
-					print_paragraphs(stdwin, upd.paras);
+					display_document(stdwin, doc);
 					refresh();
 					break;
 		}
@@ -150,6 +92,7 @@ kill:
 	endwin();
 	debug.close();
 }
+
 
 // Functions to add lines: addchstr and addnstr
 // What is chtype? How to use? All we know is it is something like an integer, so we can assign integer constants.

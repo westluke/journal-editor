@@ -33,21 +33,22 @@ enum class HeaderLevel {none, h1, h2, h3};
 //
 // And we're keeping the PLOC;
 
+// Defines a location within a particular paragraph.
 struct PLOC {
-	paragraph_index pn;
-	line_index n;
+	paragraph_size line;
+	line_size ch;
 };
 
 
 class Paragraph{
 	public:
 		// Constructor
-		Paragraph(line_index lw);
-		//Paragraph(std::initializer_list<Line> il, line_index lw);
-		//Paragraph(std::initializer_list<char*>, line_index lw);
+		Paragraph(line_size lw, paragraph_size line_number);
+		//Paragraph(std::initializer_list<Line> il, line_size lw);
+		//Paragraph(std::initializer_list<char*>, line_size lw);
 
 		// Returns length of paragraph in number of lines.
-		line_number size() const;
+		paragraph_size size() const;
 		bool empty();
 
 		// Distribute
@@ -55,7 +56,9 @@ class Paragraph{
 		// bool distribute();
 
 		// Simple text modifications
-		// void insert_ch(PLOC i, int ch);
+		void insert_ch(PLOC ploc, int ch);
+		void insert_fchar(PLOC ploc, fchar fch);
+		void replace_fchar(PLOC ploc, fchar fch);
 		// void insert_ch(PLOC i, fchar ch); // NOT IMPLEMENTED;
 		// fchar replace_ch(PLOC i, int ch); // NOT IMPLEMENTED;
 		// fchar replace_ch(PLOC i, fchar ch); // NOT IMPLEMENTED;
@@ -63,23 +66,27 @@ class Paragraph{
 
 		void append_ch(int ch);
 		void delete_last_ch();
-		void insert_ch(PLOC ploc, int ch);
+
+
+
+		bool owns_cursor();
+		void owns_cursor(bool b);
 
 		// NOT IMPLEMENTED
 		// void insert_str(PLOC i, std::string str);
-		// std::string delete_str(PLOC i, line_index length);
+		// std::string delete_str(PLOC i, line_size length);
 		// std::string replace_str(PLOC i, std::string str);
 
 		// NOT IMPLEMENTED
 		// void insert_text(PLOC i, text_type txt);
-		// text_type delete_text(PLOC i, line_index length);
+		// text_type delete_text(PLOC i, line_size length);
 		// text_type replace_text(PLOC i, text_type txt);
 
 		// NOT IMPLEMENTED
 		// void set_header_level(HeaderLevel hl);
 		// bool apply_format(PLOC start, PLOC end, TextStyle f);
 
-		// void set_line_width(line_index lw);
+		// void set_line_width(line_size lw);
 
 		// fchar get_ch(PLOC i);
 		std::vector<Line> get_lines();
@@ -94,9 +101,21 @@ class Paragraph{
 		// For use by Updater only.
 		// void _clear_changed_flags();
 
+		// Records where in the document this paragraph begins.
+		paragraph_size start_line;
+
 	private:
-		line_index line_width;
+		// Does this make any sense? Every paragraph in a group should have the same line_width, right?
+		// So should a paragraph store its own line width?
+		// Seems a little weird to pass it in every time, since that implies line_width could differ with operations on different places, which it definitely doesn't.
+		// Maybe the answer is to make line_width a smart pointer to a variable held by the document.
+		// Could absolutely do that. Why not do that? LEt's do that. Make bad things inexpressible.
+		// Ah but that could be tricky, couldn't it. And what sort of pointer do I use?
+		// NONE OF THIS IS A PROBLEM YET. STOP BEING DUMB.
+		line_size line_width;
 		std::vector<Line> lines;
+
+		bool cursor;
 
 		//HeaderLevel h_level;
 		//TextStyle initial_style;
@@ -106,12 +125,9 @@ class Paragraph{
 
 		//bool changed;
 		//void mark_changed();
-
-		// Records where on the page this paragraph begins.
-		int line_no;
 };
 
-typedef std::vector<Paragraph>::size_type document_index;
-static_assert(std::is_unsigned<document_index>::value, "Signed index type detected");
+typedef std::vector<Paragraph>::size_type document_size;
+static_assert(std::is_unsigned<document_size>::value, "Signed size type detected");
 
 #endif
