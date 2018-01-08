@@ -8,6 +8,7 @@ const TextStyle TextStyle::strikethrough = TextStyle(0x08);
 const TextStyle TextStyle::link = TextStyle(0x10);
 const TextStyle TextStyle::cursor_after = TextStyle(0x20);
 const TextStyle TextStyle::cursor_before = TextStyle(0x40);
+const TextStyle TextStyle::owns_cursor = TextStyle::cursor_after | TextStyle::cursor_before;
 
 
 // Conversions between the text_type and std::string / c-style strings
@@ -28,7 +29,9 @@ std::string text_type_to_string(const text_type &t){
 	return str;
 }
 
-
+inline std::ostream& operator<<(std::ostream& os, const TextStyle &ts){
+	return (os << ts.u);
+}
 
 std::ostream& operator<<(std::ostream& os, const fchar fch){
 	return (os << static_cast<char>(fch.character));
@@ -45,8 +48,19 @@ std::ostream& operator<<(std::ostream& os, const std::vector<const text_type> ts
 	return os;
 }
 
-
-
+std::ostream& print_all(std::ostream& os, const fchar fch){
+	os << fch << " |";
+	TextStyle ts = fch.style;
+	if (ts & TextStyle::bold) os << " Bold";
+	if (ts & TextStyle::italic) os << " Italic";
+	if (ts & TextStyle::underline) os << " Underline";
+	if (ts & TextStyle::strikethrough) os << " Strikethrough";
+	if (ts & TextStyle::link) os << " Link";
+	if (ts & TextStyle::cursor_after) os << " After";
+	if (ts & TextStyle::cursor_before) os << " Before";
+	if (ts & TextStyle::bold) os << " Bold";
+	return os;
+}
 
 bool operator==(const text_type &txt, const std::string &str){
 	return text_type_to_string(txt) == str;

@@ -43,7 +43,7 @@ class Line {
 		// The number of characters in the line, excluding whitespace.
 		// line_size visual_size() const;
 
-		fchar get_ch(line_size i) const;
+		fchar get_fchar(line_size i) const;
 
 		text_type get_text() const;
 		//text_type get_text(line_size start) const;
@@ -109,6 +109,8 @@ class Line {
 		// ln in order to get this line under line_width.
 		void relieve_excess(Line &ln, line_size line_width);
 
+		Line overflow(line_size line_width);
+
 		std::vector<text_type> split_text() const;
 		text_type first_chunk() const;
 
@@ -137,6 +139,7 @@ class Line {
 
 std::ostream& operator<<(std::ostream& os, const Line& ln);
 std::ostream& operator<<(std::ostream& os, const std::vector<Line>& vol);
+std::ostream& print_all(std::ostream& os, const Line& ln);
 
 typedef std::vector<Line>::size_type paragraph_size;
 static_assert(std::is_unsigned<paragraph_size>::value, "Signed size type detected");

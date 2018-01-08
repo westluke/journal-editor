@@ -20,7 +20,7 @@ objs/%.o: src/%.cpp
 line_tests: $(lines) $(catch) objs/line_tests.o
 	$(CC) $^ -o $@
 
-main: $(lines) objs/paragraph.o objs/document.o objs/main.o
+main: $(lines) objs/paragraph.o objs/document.o objs/main.o objs/display.o objs/debug_stream.o
 	$(CC) $^ -o $@
 
 clean:

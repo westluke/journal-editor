@@ -14,6 +14,9 @@ std::vector<std::string> text_type_to_string(const std::vector<text_type> &txts)
 	return ret;
 }
 
+// equalize breaks when first line is:"abcdefghij"
+// and second line is:"kl "
+
 TEST_CASE("Can construct lines"){
 	Line empty0;
 	Line l0 = Line("Character init");

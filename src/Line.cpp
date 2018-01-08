@@ -30,7 +30,7 @@ line_size Line::size() const{
 	return text.size();
 }
 
-fchar Line::get_ch(line_size i) const{
+fchar Line::get_fchar(line_size i) const{
 	assert(i < size());
 	return text[i];
 }
@@ -163,12 +163,12 @@ void Line::relieve_excess(Line &ln, line_size line_width){
 
 	line_size sum = 0;
 	line_size sz;
-	std::vector<text_type> split = ln.split_text();
+	std::vector<text_type> split = split_text();
 
 	assert(split.size() != 0);
 	assert(split[0].size() != 0);
 
-	if ((split.size() == 1) and (!split[0][0].isspace())){
+	if ((split[0].size() > line_width) and (!split[0][0].isspace())){
 		sum = line_width;
 	} else {
 		for (std::vector<text_type>::size_type i = 0; i < split.size(); i++){
@@ -181,6 +181,12 @@ void Line::relieve_excess(Line &ln, line_size line_width){
 	text_type end = get_text(sum, size());
 	delete_text(sum, size());
 	ln.prepend_text(end);
+}
+
+Line Line::overflow(line_size line_width){
+	Line ret;
+	relieve_excess(ret, line_width);
+	return ret;
 }
 
 std::vector<text_type> Line::split_text() const{
@@ -264,3 +270,12 @@ std::ostream& operator<<(std::ostream& os, const std::vector<Line>& vol){
 	for (auto ln: vol) os << ln << std::endl;
 	return os;
 }
+
+std::ostream& print_all(std::ostream& os, const Line& ln){
+	for (auto fchar: ln.get_text()){
+		print_all(os, fchar);
+		os << std::endl;
+	}
+	return os;
+}
+

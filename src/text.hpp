@@ -21,6 +21,7 @@ class TextStyle {
 	static const TextStyle link;
 	static const TextStyle cursor_after;
 	static const TextStyle cursor_before;
+	static const TextStyle owns_cursor;
 
 	inline TextStyle operator|(const TextStyle ts) const{
 		return TextStyle(u | ts.u);
@@ -56,9 +57,6 @@ class TextStyle {
 	}
 };
 
-inline std::ostream& operator<<(std::ostream& os, const TextStyle &ts){
-	return (os << ts.u);
-}
 
 
 
@@ -97,9 +95,14 @@ text_type string_to_text_type(const char *str);
 std::string text_type_to_string(const text_type &t);
 
 // Doesn't display their rich text forms.
+std::ostream& operator<<(std::ostream& os, const TextStyle &ts);
 std::ostream& operator<<(std::ostream& os, const fchar fch);
 std::ostream& operator<<(std::ostream& os, const text_type t);
 std::ostream& operator<<(std::ostream& os, const std::vector<const text_type> ts);
+
+std::ostream& print_all(std::ostream& os, const fchar fch);
+// a	01101011
+// a	bold after
 
 // Comparison operators between strings and text_type make debugging easier.
 bool operator==(const text_type &txt, const std::string &str);

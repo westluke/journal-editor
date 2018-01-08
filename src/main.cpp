@@ -1,7 +1,7 @@
 #include "paragraph.hpp"
 #include "document.hpp"
-#include "PLOC.hpp"
-#include <fstream>
+#include "display.hpp"
+#include "debug_stream.hpp"
 #include <vector>
 
 // This is gonna take ncurses.h from /usr/include, which will be a symlink to curses.h in the same folder.
@@ -10,7 +10,13 @@
 // #define NDEBUG
 #include <cassert>
 
-std::fstream debug;
+
+/* Alright, here are the changes to implement:
+ * Only cursor_before, with paragraphs marked with cursor_at_end.
+ * changes integrated into the paragraphs
+ * Alright, as usual, start at the top. interface first.
+ */
+
 
 const int ESC = 27;
 const int ENTER = 13;
@@ -31,10 +37,12 @@ int main() {
 	
 	keypad(stdscr, true);
 
-	debug = std::fstream("/dev/ttys001");
+	//debug = std::fstream("/dev/ttys001");
 	debug << std::endl << std::endl;
 
 	Document doc = Document(Paragraph(0, 10));
+	// fix this up
+	//display_document(stdwin, doc);
 
 	int input;
 
@@ -45,44 +53,73 @@ int main() {
 		getyx(stdwin, y, x);
 		DOCLOC dloc = doc.get_DOCLOC(y, x);
 
-		// Let's try to implement line wrapping now, still all in one paragraph.
+		// Alright, now let's implement deletion, and then new paragraphs.
 
 		switch(input){
 			case ESC:	goto kill;
 					break;
 
-			/*case ENTER:	doc.append_para();
-					werase(stdwin);
-					print_paragraphs(stdwin, doc);
-					refresh();
-					break;*/
+			case DEL:	// Actually I have to delete the character or paragraph right before this dloc.
+					// I have to set that this cursor is before the character at the dloc.
+					// to implement: deletions, previous dloc, deleting paragraphs
+					// This is interesting. highly dependent.
+					// See, if the line is empty, what can we do? We have to first delete the paragrph, then see if there is anything to bind to
+					// in the previous line, right? What's the solution there?
+					// The analogous thing would be that its right before the NEXT newline.
+					// But that doesn't actually really make sense.
+					// Cuz if we start incorporating newlines as characters, we have to decide which paragraph a newline belongs to, which is really shitty.
+					// so let's not do that.
+					
+					if (doc.get_paragraph(dloc.paragraph).is_empty()){
+						assert(dloc.line == 0 and dloc.character == 0);
+						doc.delete_paragraph
 
-			/*case DEL:	doc.delete_last_ch();
-					werase(stdwin);
-					print_paragraphs(stdwin, doc);
-					refresh();
-					break;*/
+					}
 
-			case UP:	move_up(stdwin);
+
+					doc.assign_cursor_to_character(dloc, TextStyle::cursor_before);
+
+					if (dloc.character == 0){
+						doc.delete_newline(dloc.paragraph);
+					} else {
+						doc.delete_fchar(doc.previous_dloc(dloc));
+					}
+
+
+			case UP:	Display::move_up(stdwin);
 					break;
 
-			case DOWN:	move_down(stdwin);
+			case DOWN:	Display::move_down(stdwin);
 					break;
 
-			case RIGHT:	move_right(stdwin);
+			case RIGHT:	Display::move_right(stdwin);
 					break;
 
-			case LEFT:	move_left(stdwin);
+			case LEFT:	Display::move_left(stdwin);
 					break;
 					
-					// Here's the rub. I have to insert an fchar, not an integer.
-					// OR, I have to insert an integer and THEN modify it.
-					// Easier to just insert an fchar. Let's do that.
-					// I really need to clear up the conventions around fchar and int. Better to make everything overloaded I think.
-					// Let's now beef up insert_fchar so it wraps stuff.
-			default:	doc.insert_fchar(dloc, fchar(input, TextStyle::cursor_after));
+			default:	doc.insert_fchar(dloc, input);
+					doc.assign_cursor_to_character(dloc, TextStyle::cursor_after);
+					//print_all(debug, doc);
+					// What does this do? re-Wraps all modified paragraphs.
+					
+					// so the freeze happens in here
+					doc.wrap();
+
+					/*
+					debug << "\ec";
+					debug << input << std::endl;
+					print_all(debug, doc.get_paragraphs()[0]);
+					debug << std::endl << std::endl;
+					print_all(debug, doc.get_paragraphs()[0]);
+					*/
+
+
+					// OH its failing BECAUSE of the overflow copying, you dumbfuck
+
 					werase(stdwin);
-					display_document(stdwin, doc);
+					Display::display_document(stdwin, doc);
+					debug << std::endl << "Finished printing" << std::endl;
 					refresh();
 					break;
 		}
