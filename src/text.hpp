@@ -20,8 +20,6 @@ class TextStyle {
 	static const TextStyle strikethrough;
 	static const TextStyle link;
 	static const TextStyle cursor_after;
-	static const TextStyle cursor_before;
-	static const TextStyle owns_cursor;
 
 	inline TextStyle operator|(const TextStyle ts) const{
 		return TextStyle(u | ts.u);

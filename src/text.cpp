@@ -7,8 +7,6 @@ const TextStyle TextStyle::underline = TextStyle(0x04);
 const TextStyle TextStyle::strikethrough = TextStyle(0x08);
 const TextStyle TextStyle::link = TextStyle(0x10);
 const TextStyle TextStyle::cursor_after = TextStyle(0x20);
-const TextStyle TextStyle::cursor_before = TextStyle(0x40);
-const TextStyle TextStyle::owns_cursor = TextStyle::cursor_after | TextStyle::cursor_before;
 
 
 // Conversions between the text_type and std::string / c-style strings
@@ -57,7 +55,6 @@ std::ostream& print_all(std::ostream& os, const fchar fch){
 	if (ts & TextStyle::strikethrough) os << " Strikethrough";
 	if (ts & TextStyle::link) os << " Link";
 	if (ts & TextStyle::cursor_after) os << " After";
-	if (ts & TextStyle::cursor_before) os << " Before";
 	if (ts & TextStyle::bold) os << " Bold";
 	return os;
 }

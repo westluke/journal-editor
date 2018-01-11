@@ -11,6 +11,7 @@ enum class HeaderLevel {none, h1, h2, h3};
 
 // Defines a location within a particular paragraph.
 struct PLOC {
+	inline PLOC(paragraph_size l, line_size c): line(l), character(c) {}
 	paragraph_size line;
 	line_size character;
 };
@@ -18,14 +19,14 @@ struct PLOC {
 class Paragraph{
 	public:
 		// Constructor
-		Paragraph(line_size lw, paragraph_size line_number);
+		Paragraph(paragraph_size line_number);
 		Paragraph(const Paragraph &p);
 		//Paragraph(std::initializer_list<Line> il, line_size lw);
-		Paragraph(std::initializer_list<char*> il, line_size lw);
+		Paragraph(std::initializer_list<char*> il);
 
 		// Returns length of paragraph in number of lines.
 		paragraph_size size() const;
-		bool empty() const;
+		bool is_empty() const;
 
 		fchar get_fchar(PLOC ploc) const;
 
@@ -33,23 +34,34 @@ class Paragraph{
 		void insert_fchar(PLOC ploc, fchar fch);
 		void replace_fchar(PLOC ploc, fchar fch);
 
+		/*
+		bool next_PLOC(PLOC initial, PLOC &target);
+		bool previous_PLOC(PLOC initial, PLOC &target);
+		bool next_line(PLOC initial, PLOC &target);
+		bool previous_line(PLOC initial, PLOC &target);
+		*/
+
 		bool has_cursor() const;
 		void give_cursor();
 		void remove_cursor();
 
+		bool is_changed() const;
+		void mark_changed();
+		void unmark_changed();
+
 		const std::vector<Line>& get_lines() const;
 		const Line& get_line(paragraph_size li) const;
 
-		bool wrap();
+		bool wrap(line_size lw);
 
 		// Records where in the document this paragraph begins.
 		paragraph_size start_line;
 
 	private:
-		line_size line_width;
 		std::vector<Line> lines;
 
-		bool cursor;
+		bool cursor_at_start;
+		bool changed;
 };
 
 typedef std::vector<Paragraph>::size_type document_size;

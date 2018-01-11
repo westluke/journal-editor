@@ -20,34 +20,12 @@
 // I'm gonna need functions to insert and delete paragraphs anyway. Can just make a replacement one too.
 
 namespace Display {
-	// Implement this by making a copy of the paragraph, then removing the cursor and replacing.
-	void remove_cursor_from_paragraph(Document &doc, document_size i){
-		Paragraph paragraph = Paragraph(doc.get_paragraph(i));
-		assert((paragraph.has_cursor() and paragraph.empty()));
-		
-		paragraph.remove_cursor();
-		doc.replace_paragraph(i, paragraph);
-	}
-
-	void remove_cursor_from_character(Document &doc, DOCLOC dloc){
-		fchar ch = doc.get_fchar(dloc);
-		assert((ch.style & TextStyle::owns_cursor));
-		doc.replace_fchar(dloc, fchar(ch.character, (ch.style & ~TextStyle::owns_cursor)));
-
-		Paragraph paragraph = Paragraph(doc.get_paragraph(dloc.paragraph));
-		assert(paragraph.has_cursor());
-		paragraph.remove_cursor();
-		doc.replace_paragraph(dloc.paragraph, paragraph);
-	}
-
-	bool find_paragraph_owning_cursor(const Document &doc, document_size &i){
+	bool find_cursor_from_paragraph(const Document &doc, DOCLOC &cursor){
 		assert_cursor_valid(doc);
-		std::vector<Paragraph> paragraphs = doc.get_paragraphs();
 
-		for (document_size pi = 0; pi < paragraphs.size(); pi++){
-			Paragraph paragraph = paragraphs[pi];
-			if (paragraph.has_cursor() and paragraph.size() == 0){
-				i = pi;
+		for (document_size pi = 0; pi < doc.size(); pi++){
+			if (doc.get_paragraph(pi).has_cursor()){
+				cursor = DOCLOC(pi, 0, 0);
 				return true;
 			}
 		}
@@ -55,71 +33,53 @@ namespace Display {
 		return false;
 	}
 
-	// I think this fails
-	bool find_character_owning_cursor(const Document &doc, DOCLOC &dloc){
+	bool find_cursor_from_character(const Document &doc, DOCLOC &cursor){
 		assert_cursor_valid(doc);
 
-		std::vector<Paragraph> paragraphs = doc.get_paragraphs();
+		for (document_size pi = 0; pi < doc.size(); pi++){
+			Paragraph paragraph = doc.get_paragraph(pi);
 
-		for (document_size pi = 0; pi < paragraphs.size(); pi++){
-			Paragraph paragraph = paragraphs[pi];
+			for (paragraph_size li = 0; li < paragraph.size(); li++){
+				Line line = paragraph.get_line(li);
 
-			if (paragraph.has_cursor()){
-				std::vector<Line> lines = paragraph.get_lines();
+				for (line_size ti = 0; ti < line.size(); ti++){
+					TextStyle ts = line.get_fchar(ti).style;
 
-				for (paragraph_size li = 0; li < lines.size(); li++){
-					text_type text = lines[li].get_text();
-
-					for (line_size ti = 0; ti < text.size(); ti++){
-						TextStyle ts = text[ti].style;
-						if (ts & TextStyle::owns_cursor){
-							dloc =  DOCLOC(pi, li, ti);
-							return true;
-						}
+					if (ts & TextStyle::cursor_after){
+						cursor = DOCLOC(pi, li, ti + 1);
+						return true;
 					}
 				}
-				
-				return false;
 			}
+				
 		}
 		return false;
 	}
 
-	// Only one paragraph can have cursor. Also, independently, zero or one character can have cursor.
-	// ALSO, IF a character is found to have the cursor, that character MUST be in the paragraph that had the cursor.
+	// A doc is valid with respect to its cursor if one paragraph is marked, XOR one character is marked.
 	void assert_cursor_valid(const Document &doc){
 		std::vector<Paragraph> paragraphs = doc.get_paragraphs();
 		bool found_character = false;
 		bool found_paragraph = false;
-		document_size found_in;
 
-		for (document_size pi = 0; pi < paragraphs.size(); pi++){
-			for (auto line: paragraphs[pi].get_lines()){
-				for (auto ch: line.get_text()){
-					if ((ch.style & TextStyle::cursor_after) or (ch.style & TextStyle::cursor_before)){
-						assert((!found_character));
+		for (auto paragraph: paragraphs){
+
+			if (paragraph.has_cursor()){
+				assert(not found_paragraph);
+				found_paragraph = true;
+			}
+
+			for (auto line: paragraph.get_lines()){
+				for (auto fch: line.get_text()){
+					if (fch.style & TextStyle::cursor_after){
+						assert(not found_character);
 						found_character = true;
-						found_in = pi;
 					}
 				}
 			}
 		}
-
-		for (document_size pi = 0; pi < paragraphs.size(); pi++){
-			Paragraph paragraph = paragraphs[pi];
-			if (paragraph.has_cursor()){
-				assert((!found_paragraph));
-				found_paragraph = true;
-
-				if (found_character){
-					assert(found_in == pi);
-				} else {
-					assert(paragraph.size() == 0);
-				}
-			}
-		}
-
-		assert(found_paragraph);
+		assert(found_character or found_paragraph);
+		assert(not (found_character and found_paragraph));
 	}
 
 	void display_fchar(WINDOW* win, fchar ch, int y, int x){
@@ -135,39 +95,31 @@ namespace Display {
 	}
 
 	void display_line(WINDOW* win, const Line &line, int y){
-		text_type text = line.get_text();
-
-		for (line_size x = 0; x < text.size(); x++){
-			fchar ch = text[x];
-
-			display_fchar(win, ch, y, x);
+		for (line_size x = 0; x < line.size(); x++){
+			display_fchar(win, line.get_fchar(x), y, x);
 		}
 	}
 
 	void display_paragraph(WINDOW* win, const Paragraph &p){
-		std::vector<Line> lines = p.get_lines();
-
-		for(paragraph_size li = 0; li < lines.size(); li++){
-			display_line(win, lines[li], p.start_line + li);
+		for (paragraph_size li = 0; li < p.size(); li++){
+			display_line(win, p.get_line(li), p.start_line + li);
 		}
+
 	}
 
-	void display_document(WINDOW* win, Document &doc){
+	// When we find the character holding the cursor, we want to know where it was.
+	DOCLOC display_document(WINDOW* win, Document &doc){
 		for (auto paragraph: doc.get_paragraphs()) display_paragraph(win, paragraph);
 
-		document_size pi;
-		DOCLOC dloc;
+		DOCLOC cursor;
 
-		if (find_paragraph_owning_cursor(doc, pi)){
-			move(doc.get_paragraph(pi).start_line, 0);
-			remove_cursor_from_paragraph(doc, pi);
-		} else if (find_character_owning_cursor(doc, dloc)){
-			int y, x;
-			doc.get_cursor(dloc, y, x);
-			if (doc.get_fchar(dloc).style & TextStyle::cursor_after) move(y, x+1);
-			else move(y, x - 1);
-			remove_cursor_from_character(doc, dloc);
+		if (find_cursor_from_paragraph(doc, cursor)){
+			doc.take_cursor_from_paragraph(cursor.paragraph);
+		} else if (find_cursor_from_character(doc, cursor)){
+			doc.take_cursor_from_character(DOCLOC(cursor.paragraph, cursor.line, cursor.character - 1));
 		} else { assert(false); }
+
+		return cursor;
 	}
 
 	void move_right(WINDOW* win){
@@ -192,5 +144,17 @@ namespace Display {
 		int y, x;
 		getyx(win, y, x);
 		move(y + 1, x);
+	}
+
+	// Implement duplicate cursor later.
+	void display_cursor(DOCLOC dloc, Document &doc){
+		if (dloc.character >= doc.get_line_width()){
+			dloc.character = doc.get_line_width() - 1;
+		}
+
+		int y, x;
+		doc.get_cursor(dloc, y, x);
+		move(y, x);
+
 	}
 }
